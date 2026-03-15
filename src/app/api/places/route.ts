@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 // GET /api/places - List all places, optionally filtered by bounds
 export async function GET(req: NextRequest) {
@@ -10,19 +11,32 @@ export async function GET(req: NextRequest) {
   const west = searchParams.get('west');
   const search = searchParams.get('search') || '';
   const minRating = parseFloat(searchParams.get('minRating') || '0');
-  const priceRange = searchParams.getAll('priceRange').map(Number);
+  const priceRange = searchParams.getAll('priceRange').map(Number).filter((n) => !isNaN(n));
 
   try {
+    // Build the where clause explicitly to avoid spread short-circuit issues
+    const where: Prisma.PlaceWhereInput = {};
+
+    if (search) {
+      where.name = { contains: search, mode: 'insensitive' };
+    }
+
+    if (minRating > 0) {
+      where.rating = { gte: minRating };
+    }
+
+    if (priceRange.length > 0) {
+      where.priceRange = { in: priceRange };
+    }
+
+    // Only apply bounds filter when ALL four values are present
+    if (north && south && east && west) {
+      where.lat = { gte: parseFloat(south), lte: parseFloat(north) };
+      where.lng = { gte: parseFloat(west), lte: parseFloat(east) };
+    }
+
     const places = await prisma.place.findMany({
-      where: {
-        ...(search && { name: { contains: search, mode: 'insensitive' } }),
-        ...(minRating > 0 && { rating: { gte: minRating } }),
-        ...(priceRange.length > 0 && { priceRange: { in: priceRange } }),
-        ...(north && south && east && west && {
-          lat: { gte: parseFloat(south), lte: parseFloat(north) },
-          lng: { gte: parseFloat(west), lte: parseFloat(east) },
-        }),
-      },
+      where,
       include: { menuItems: true },
       orderBy: { rating: 'desc' },
       take: 100,
@@ -31,7 +45,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(places);
   } catch (err) {
     console.error('[GET /api/places]', err);
-    return NextResponse.json({ error: 'Failed to fetch places' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to fetch places', detail: err instanceof Error ? err.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 }
 
