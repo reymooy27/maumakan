@@ -1,11 +1,11 @@
 'use client';
 
+import { usePlaces } from '@/hooks/usePlaces';
+import { useMapStore } from '@/store/mapStore';
+import 'leaflet/dist/leaflet.css';
 import { useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, useMapEvents } from 'react-leaflet';
-import { useMapStore } from '@/store/mapStore';
-import { usePlaces } from '@/hooks/usePlaces';
 import PlaceMarker from './PlaceMarker';
-import 'leaflet/dist/leaflet.css';
 
 function MapEventHandler() {
   const { setBounds, setCenter, setZoom } = useMapStore();

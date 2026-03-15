@@ -1,14 +1,12 @@
 'use client';
 
 import { SlidersHorizontal, X, RotateCcw } from 'lucide-react';
-import { useState } from 'react';
 import { useMapStore } from '@/store/mapStore';
 
 const PRICE_LABELS = ['$', '$$', '$$$', '$$$$'];
 
 export default function FilterPanel() {
-  const [open, setOpen] = useState(false);
-  const { filters, setFilters, resetFilters } = useMapStore();
+  const { filters, setFilters, resetFilters, filterPanelOpen, setFilterPanelOpen } = useMapStore();
 
   function togglePrice(value: number) {
     const current = filters.priceRange;
@@ -22,13 +20,15 @@ export default function FilterPanel() {
     <>
       {/* Toggle button */}
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="
+        onClick={() => setFilterPanelOpen(!filterPanelOpen)}
+        className={`
           flex items-center gap-2 px-4 py-2.5
-          bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-xl
-          text-sm text-white hover:border-orange-500 hover:text-orange-400
-          transition-all duration-200 font-medium
-        "
+          bg-gray-900/90 backdrop-blur-sm border rounded-xl
+          text-sm font-medium transition-all duration-200 cursor-pointer
+          ${filterPanelOpen
+            ? 'border-orange-500 text-orange-400'
+            : 'border-gray-700 text-white hover:border-orange-500 hover:text-orange-400'}
+        `}
       >
         <SlidersHorizontal className="w-4 h-4" />
         Filters
@@ -40,7 +40,7 @@ export default function FilterPanel() {
           fixed top-0 right-0 h-full w-80 z-50
           bg-gray-900/95 backdrop-blur-lg border-l border-gray-800
           transform transition-transform duration-300 ease-in-out
-          ${open ? 'translate-x-0' : 'translate-x-full'}
+          ${filterPanelOpen ? 'translate-x-0' : 'translate-x-full'}
         `}
       >
         <div className="flex items-center justify-between p-5 border-b border-gray-800">
@@ -49,13 +49,13 @@ export default function FilterPanel() {
             <button
               onClick={resetFilters}
               title="Reset"
-              className="p-1.5 text-gray-400 hover:text-orange-400 transition-colors"
+              className="p-1.5 text-gray-400 hover:text-orange-400 transition-colors cursor-pointer"
             >
               <RotateCcw className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setOpen(false)}
-              className="p-1.5 text-gray-400 hover:text-white transition-colors"
+              onClick={() => setFilterPanelOpen(false)}
+              className="p-1.5 text-gray-400 hover:text-white transition-colors cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
@@ -77,7 +77,7 @@ export default function FilterPanel() {
                     key={val}
                     onClick={() => togglePrice(val)}
                     className={`
-                      flex-1 py-2 rounded-lg text-sm font-semibold border transition-all duration-150
+                      flex-1 py-2 rounded-lg text-sm font-semibold border transition-all duration-150 cursor-pointer
                       ${active
                         ? 'bg-orange-500 border-orange-500 text-white'
                         : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-orange-500 hover:text-orange-400'}
@@ -129,14 +129,6 @@ export default function FilterPanel() {
           </div>
         </div>
       </div>
-
-      {/* Overlay */}
-      {open && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40"
-          onClick={() => setOpen(false)}
-        />
-      )}
     </>
   );
 }

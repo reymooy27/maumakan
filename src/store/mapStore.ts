@@ -14,6 +14,10 @@ interface MapStore {
   selectedPlace: Place | null;
   setSelectedPlace: (place: Place | null) => void;
 
+  // Filter panel
+  filterPanelOpen: boolean;
+  setFilterPanelOpen: (open: boolean) => void;
+
   // Filters
   filters: Filters;
   setFilters: (filters: Partial<Filters>) => void;
@@ -42,7 +46,12 @@ export const useMapStore = create<MapStore>((set) => ({
   setZoom: (zoom) => set({ zoom }),
 
   selectedPlace: null,
-  setSelectedPlace: (place) => set({ selectedPlace: place }),
+  setSelectedPlace: (place) =>
+    set({ selectedPlace: place, ...(place ? { filterPanelOpen: false } : {}) }),
+
+  filterPanelOpen: false,
+  setFilterPanelOpen: (open) =>
+    set({ filterPanelOpen: open, ...(open ? { selectedPlace: null } : {}) }),
 
   filters: DEFAULT_FILTERS,
   setFilters: (partial) =>
