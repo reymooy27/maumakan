@@ -34,8 +34,8 @@ const DEFAULT_FILTERS: Filters = {
   maxDistance: 0,
 };
 
-// Default center: Jakarta, Indonesia
-const DEFAULT_CENTER: [number, number] = [-6.2088, 106.8456];
+// Default center: Kupang, Indonesia (Changed for testing)
+const DEFAULT_CENTER: [number, number] = [-10.1583, 123.5973];
 
 export const useMapStore = create<MapStore>((set) => ({
   bounds: null,

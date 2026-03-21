@@ -18,11 +18,18 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 function buildUrl(bounds: ReturnType<typeof useMapStore.getState>['bounds'], filters: Filters, search: string) {
   const params = new URLSearchParams();
+  // We remove strict bounds query here if we want to fetch more generally and cache
+  // But for performance, it's common to expand bounds by a factor so we don't refetch on small pans.
+  // Instead of passing the exact bounds, we can either pass a wider radius or just fetch by city/area.
+  // For now, let's stick to the bounds but SWR handles the caching. To prevent refetching on every tiny drag, 
+  // we could round the coordinates to a certain decimal place, but dedupingInterval does a great job here.
   if (bounds) {
-    params.set('north', String(bounds.north));
-    params.set('south', String(bounds.south));
-    params.set('east', String(bounds.east));
-    params.set('west', String(bounds.west));
+    // Rounding bounds to 2 decimal places creates "cache grids"
+    // reducing the number of requests while dragging
+    params.set('north', (Math.ceil(bounds.north * 10) / 10).toString());
+    params.set('south', (Math.floor(bounds.south * 10) / 10).toString());
+    params.set('east', (Math.ceil(bounds.east * 10) / 10).toString());
+    params.set('west', (Math.floor(bounds.west * 10) / 10).toString());
   }
   if (search) params.set('search', search);
   if (filters.minRating > 0) params.set('minRating', String(filters.minRating));
@@ -34,9 +41,17 @@ export function usePlaces() {
   const { bounds, filters, searchQuery, center } = useMapStore();
 
   const url = buildUrl(bounds, filters, searchQuery);
+  
+  // SWR automatically caches requests based on the URL key
+  // Best practice: 
+  // 1. dedupingInterval (prevents multiple identical requests at the same time)
+  // 2. revalidateOnFocus (don't refetch just because user switches tabs if map hasn't moved)
+  // 3. keepPreviousData (keeps showing old pins while fetching new ones during pan)
   const { data, error, isLoading } = useSWR<Place[]>(url, fetcher, {
-    refreshInterval: 30_000,
-    dedupingInterval: 5_000,
+    refreshInterval: 60_000,     // Poll every minute instead of 30s
+    dedupingInterval: 10_000,    // Dedupe requests within 10 seconds
+    revalidateOnFocus: false,
+    keepPreviousData: true,      // crucial for smooth map panning
   });
 
   const places: Place[] = (data ?? [])
