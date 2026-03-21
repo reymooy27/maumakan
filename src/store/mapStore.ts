@@ -26,18 +26,34 @@ interface MapStore {
   // Search
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+  searchSidebarOpen: boolean;
+  setSearchSidebarOpen: (open: boolean) => void;
+  searchResults: Place[];
+  setSearchResults: (results: Place[]) => void;
+  hoveredPlaceId: string | null;
+  setHoveredPlaceId: (id: string | null) => void;
 
   // Routing and User Location
   userLocation: [number, number] | null;
   setUserLocation: (location: [number, number] | null) => void;
   routeGeometry: [number, number][] | null;
   setRouteGeometry: (geometry: [number, number][] | null) => void;
+
+  // Direction Sidebar
+  directionSidebarOpen: boolean;
+  setDirectionSidebarOpen: (open: boolean) => void;
+  transportMode: 'driving' | 'foot' | 'bike';
+  setTransportMode: (mode: 'driving' | 'foot' | 'bike') => void;
+  routeData: { distance: number; duration: number } | null;
+  setRouteData: (data: { distance: number; duration: number } | null) => void;
 }
 
 const DEFAULT_FILTERS: Filters = {
-  priceRange: [1, 2, 3, 4],
+  minPrice: 0,
+  maxPrice: 500000,
   minRating: 0,
   maxDistance: 0,
+  isOpenNow: false,
 };
 
 // Default center: Kupang, Indonesia (Changed for testing)
@@ -47,20 +63,47 @@ export const useMapStore = create<MapStore>((set) => ({
   bounds: null,
   center: DEFAULT_CENTER,
   zoom: 13,
-  setBounds: (bounds) => set({ bounds }),
-  setCenter: (center) => set({ center }),
-  setZoom: (zoom) => set({ zoom }),
+  setBounds: (bounds) =>
+    set((state) => {
+      if (
+        state.bounds &&
+        state.bounds.north === bounds.north &&
+        state.bounds.south === bounds.south &&
+        state.bounds.east === bounds.east &&
+        state.bounds.west === bounds.west
+      ) {
+        return state;
+      }
+      return { bounds };
+    }),
+  setCenter: (center) =>
+    set((state) => {
+      if (state.center[0] === center[0] && state.center[1] === center[1]) {
+        return state;
+      }
+      return { center };
+    }),
+  setZoom: (zoom) =>
+    set((state) => {
+      // Round zoom to 2 decimal places to avoid precision issues
+      const roundedZoom = Math.round(zoom * 100) / 100;
+      if (state.zoom === roundedZoom) return state;
+      return { zoom: roundedZoom };
+    }),
 
   selectedPlace: null,
   setSelectedPlace: (place) =>
     set({ 
       selectedPlace: place, 
-      ...(place ? { filterPanelOpen: false } : {}) 
+      ...(place ? { filterPanelOpen: false, searchSidebarOpen: false } : {}) 
     }),
 
   filterPanelOpen: false,
   setFilterPanelOpen: (open) =>
-    set({ filterPanelOpen: open, ...(open ? { selectedPlace: null, routeGeometry: null } : {}) }),
+    set({ 
+      filterPanelOpen: open, 
+      ...(open ? { selectedPlace: null, routeGeometry: null, directionSidebarOpen: false, searchSidebarOpen: false } : {}) 
+    }),
 
   filters: DEFAULT_FILTERS,
   setFilters: (partial) =>
@@ -69,9 +112,29 @@ export const useMapStore = create<MapStore>((set) => ({
 
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
+  searchSidebarOpen: false,
+  setSearchSidebarOpen: (open) => set({ 
+    searchSidebarOpen: open, 
+    ...(open ? { filterPanelOpen: false, selectedPlace: null, directionSidebarOpen: false } : {}) 
+  }),
+  searchResults: [],
+  setSearchResults: (results) => set({ searchResults: results }),
+  hoveredPlaceId: null,
+  setHoveredPlaceId: (id) => set({ hoveredPlaceId: id }),
 
   userLocation: null,
   setUserLocation: (location) => set({ userLocation: location }),
   routeGeometry: null,
   setRouteGeometry: (geometry) => set({ routeGeometry: geometry }),
+
+  directionSidebarOpen: false,
+  setDirectionSidebarOpen: (open) => 
+    set({ 
+      directionSidebarOpen: open, 
+      ...(open ? { filterPanelOpen: false, searchSidebarOpen: false } : { routeGeometry: null, routeData: null }) 
+    }),
+  transportMode: 'driving',
+  setTransportMode: (mode) => set({ transportMode: mode }),
+  routeData: null,
+  setRouteData: (data) => set({ routeData: data }),
 }));

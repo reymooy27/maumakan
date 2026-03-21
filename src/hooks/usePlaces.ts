@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import useSWR from 'swr';
 import { Place, Filters } from '@/types';
 import { useMapStore } from '@/store/mapStore';
@@ -18,14 +19,7 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
 
 function buildUrl(bounds: ReturnType<typeof useMapStore.getState>['bounds'], filters: Filters, search: string) {
   const params = new URLSearchParams();
-  // We remove strict bounds query here if we want to fetch more generally and cache
-  // But for performance, it's common to expand bounds by a factor so we don't refetch on small pans.
-  // Instead of passing the exact bounds, we can either pass a wider radius or just fetch by city/area.
-  // For now, let's stick to the bounds but SWR handles the caching. To prevent refetching on every tiny drag, 
-  // we could round the coordinates to a certain decimal place, but dedupingInterval does a great job here.
   if (bounds) {
-    // Rounding bounds to 2 decimal places creates "cache grids"
-    // reducing the number of requests while dragging
     params.set('north', (Math.ceil(bounds.north * 10) / 10).toString());
     params.set('south', (Math.floor(bounds.south * 10) / 10).toString());
     params.set('east', (Math.ceil(bounds.east * 10) / 10).toString());
@@ -33,36 +27,51 @@ function buildUrl(bounds: ReturnType<typeof useMapStore.getState>['bounds'], fil
   }
   if (search) params.set('search', search);
   if (filters.minRating > 0) params.set('minRating', String(filters.minRating));
-  filters.priceRange.forEach((p) => params.append('priceRange', String(p)));
+  if (filters.minPrice > 0) params.set('minPrice', String(filters.minPrice));
+  if (filters.maxPrice < 500000) params.set('maxPrice', String(filters.maxPrice));
+  
+  if (filters.isOpenNow) {
+    params.set('isOpenNow', 'true');
+    // Calculate current time in minutes from midnight (WITA = UTC+8)
+    const now = new Date();
+    const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
+    const witaMinutes = (utcMinutes + 8 * 60) % 1440;
+    params.set('currentTime', String(witaMinutes));
+  }
+  
   return `/api/places?${params.toString()}`;
 }
 
 export function usePlaces() {
-  const { bounds, filters, searchQuery, center } = useMapStore();
+  const bounds = useMapStore((s) => s.bounds);
+  const filters = useMapStore((s) => s.filters);
+  const searchQuery = useMapStore((s) => s.searchQuery);
+  const center = useMapStore((s) => s.center);
 
   const url = buildUrl(bounds, filters, searchQuery);
   
-  // SWR automatically caches requests based on the URL key
-  // Best practice: 
-  // 1. dedupingInterval (prevents multiple identical requests at the same time)
-  // 2. revalidateOnFocus (don't refetch just because user switches tabs if map hasn't moved)
-  // 3. keepPreviousData (keeps showing old pins while fetching new ones during pan)
   const { data, error, isLoading } = useSWR<Place[]>(url, fetcher, {
-    refreshInterval: 60_000,     // Poll every minute instead of 30s
-    dedupingInterval: 10_000,    // Dedupe requests within 10 seconds
+    refreshInterval: 60_000,
+    dedupingInterval: 10_000,
     revalidateOnFocus: false,
-    keepPreviousData: true,      // crucial for smooth map panning
+    keepPreviousData: true,
   });
 
-  const places: Place[] = (data ?? [])
-    .map((p) => ({
-      ...p,
-      distance: getDistanceKm(center[0], center[1], p.lat, p.lng),
-    }))
-    .filter((p) => {
-      if (filters.maxDistance > 0 && (p.distance ?? 0) > filters.maxDistance) return false;
-      return true;
-    });
+  const places: Place[] = useMemo(() => {
+    if (!data || !Array.isArray(data)) return [];
+    
+    // We only re-calculate and re-reference when data or relevant filters change
+    // This stops the infinite re-render loop if center changes slightly
+    return data
+      .map((p) => ({
+        ...p,
+        distance: getDistanceKm(center[0], center[1], p.lat, p.lng),
+      }))
+      .filter((p) => {
+        if (filters.maxDistance > 0 && (p.distance ?? 0) > filters.maxDistance) return false;
+        return true;
+      });
+  }, [data, center, filters.maxDistance]);
 
   return { places, error, isLoading };
 }

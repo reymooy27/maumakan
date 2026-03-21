@@ -1,5 +1,6 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '@prisma/client';
+// Prisma Client instance with custom adapter support for pg (Supabase Pooler)
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;

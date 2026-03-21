@@ -10,7 +10,9 @@ export interface Place {
   lat: number;
   lng: number;
   rating: number;
-  priceRange: number; // 1–4
+  avgPrice: number; // IDR actual value
+  openTime: number;   // Minutes from midnight
+  closeTime: number;  // Minutes from midnight
   imageUrl?: string;
   createdAt: string;
   menuItems?: MenuItem[];
@@ -37,9 +39,11 @@ export interface Review {
 }
 
 export interface Filters {
-  priceRange: number[]; // e.g. [1, 2]
+  minPrice: number;     // IDR
+  maxPrice: number;     // IDR
   minRating: number;    // 0–5
   maxDistance: number;  // km, 0 = unlimited
+  isOpenNow: boolean;
 }
 
 export interface MapBounds {

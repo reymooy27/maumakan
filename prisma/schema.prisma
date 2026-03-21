@@ -18,7 +18,9 @@ model Place {
   lat        Float
   lng        Float
   rating     Float      @default(0)
-  priceRange Int
+  avgPrice   Int        @default(0)
+  openTime   Int        @default(480)
+  closeTime  Int        @default(1320)
   imageUrl   String?
   createdAt  DateTime   @default(now())
   menuItems  MenuItem[]

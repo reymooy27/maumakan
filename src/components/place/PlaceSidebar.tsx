@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import Image from 'next/image';
-import { X, Star, MapPin, DollarSign, Navigation } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
+import { DollarSign, MapPin, Navigation, Star, X } from 'lucide-react';
+import Image from 'next/image';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import MenuList from './MenuList';
 
 const PRICE_LABEL: Record<number, string> = { 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' };
@@ -14,9 +14,9 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 /* ── snap-point heights (vh) ─────────────────────────────── */
-const SNAP_PEEK = 45;   // collapsed / peek  (% of viewport)
+const SNAP_PEEK = 25;   // collapsed / peek  (% of viewport)
 const SNAP_FULL = 75;   // fully expanded     (% of viewport) - Fixed to 75% so user can still tap outside/close
-const DISMISS_THRESHOLD = 25; // below this vh → close
+const DISMISS_THRESHOLD = 20; // below this vh → close
 
 export default function PlaceSidebar() {
   const { selectedPlace, setSelectedPlace } = useMapStore();
@@ -26,15 +26,15 @@ export default function PlaceSidebar() {
   const contentRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const startY = useRef(0);
-  const startHeight = useRef(SNAP_PEEK);
-  const [sheetHeight, setSheetHeight] = useState(SNAP_PEEK);
+  const startHeight = useRef(SNAP_FULL);
+  const [sheetHeight, setSheetHeight] = useState(SNAP_FULL);
   const [isDragging, setIsDragging] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
 
   /* ── open / close animation ───────────────────────────── */
   useEffect(() => {
     if (selectedPlace) {
-      setSheetHeight(SNAP_PEEK);
+      setSheetHeight(SNAP_FULL);
       // Small delay for enter animation
       requestAnimationFrame(() => setIsVisible(true));
     } else {
@@ -83,7 +83,7 @@ export default function PlaceSidebar() {
     }
   }, [sheetHeight, close]);
 
-  if (!selectedPlace) return null;
+  if (!selectedPlace || useMapStore.getState().directionSidebarOpen) return null;
   const p = selectedPlace;
 
   return (
@@ -98,7 +98,7 @@ export default function PlaceSidebar() {
       {/* ── Desktop: right sidebar ───────────────────────── */}
       <aside
         className={`
-          hidden md:flex fixed top-0 right-0 h-full w-full max-w-sm z-40
+          hidden md:flex fixed top-0 right-0 h-full w-full max-w-sm z-50
           bg-gray-900/98 backdrop-blur-lg border-l border-gray-800
           flex-col overflow-hidden
           transition-transform duration-300 ease-out
@@ -117,7 +117,7 @@ export default function PlaceSidebar() {
         onPointerCancel={onPointerUp}
         style={{ height: `${sheetHeight}vh` }}
         className={`
-          md:hidden fixed bottom-0 left-0 right-0 z-40
+          md:hidden fixed bottom-0 left-0 right-0 z-50
           bg-gray-900 border-t border-gray-800 rounded-t-2xl
           flex flex-col overflow-hidden touch-none
           ${isDragging ? '' : 'transition-[height] duration-300 ease-out'}
@@ -214,38 +214,10 @@ function SheetContent({ place: p }: { place: NonNullable<ReturnType<typeof useMa
    Shared place detail section
    ─────────────────────────────────────────────────────────── */
 function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMapStore.getState>['selectedPlace']> }) {
-  const { userLocation, setRouteGeometry } = useMapStore();
-  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+  const { setDirectionSidebarOpen } = useMapStore();
 
-  const handleGetDirections = async () => {
-    if (!userLocation) {
-      alert('Lokasi Anda belum ditemukan atau GPS tidak aktif.');
-      return;
-    }
-
-    setIsLoadingRoute(true);
-    try {
-      // OSRM expects coordinates in lon,lat format
-      const start = `${userLocation[1]},${userLocation[0]}`;
-      const end = `${p.lng},${p.lat}`;
-      const url = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson`;
-      
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
-        // GeoJSON coordinates are [lon, lat], Leaflet Polyline needs [lat, lon]
-        const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
-        setRouteGeometry(coords);
-      } else {
-        alert('Rute ke lokasi ini tidak ditemukan.');
-      }
-    } catch (err) {
-      console.error('Failed to fetch route:', err);
-      alert('Gagal mengambil rute. Pastikan Anda memiliki koneksi internet.');
-    } finally {
-      setIsLoadingRoute(false);
-    }
+  const handleGetDirections = () => {
+    setDirectionSidebarOpen(true);
   };
 
   return (
@@ -267,7 +239,9 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
           {/* Price */}
           <div className="flex items-center gap-1 text-emerald-400">
             <DollarSign className="w-4 h-4" />
-            <span className="text-sm font-semibold">{PRICE_LABEL[p.priceRange] ?? '?'}</span>
+            <span className="text-sm font-semibold">
+              Rp {p.avgPrice.toLocaleString('id-ID')}
+            </span>
           </div>
 
           {/* Distance */}
@@ -277,6 +251,38 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
               <span className="text-sm">{p.distance.toFixed(1)} km</span>
             </div>
           )}
+        </div>
+
+        {/* Status and Hours */}
+        <div className="mt-4 flex items-center gap-2">
+          {(() => {
+            const openMin = p.openTime ?? 480;
+            const closeMin = p.closeTime ?? 1320;
+            
+            const now = new Date();
+            const utcMin = now.getUTCHours() * 60 + now.getUTCMinutes();
+            const witaMin = (utcMin + 8 * 60) % 1440;
+            const isOpen = openMin <= closeMin 
+              ? (witaMin >= openMin && witaMin <= closeMin)
+              : (witaMin >= openMin || witaMin <= closeMin);
+            
+            const formatTime = (min: number) => {
+              const h = Math.floor(min / 60).toString().padStart(2, '0');
+              const m = (min % 60).toString().padStart(2, '0');
+              return `${h}:${m}`;
+            };
+
+            return (
+              <>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${isOpen ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                  {isOpen ? 'Open Now' : 'Closed'}
+                </span>
+                <span className="text-xs text-gray-500">
+                  {formatTime(openMin)} – {formatTime(closeMin)}
+                </span>
+              </>
+            );
+          })()}
         </div>
 
         {p.address && (
@@ -291,11 +297,10 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
       <div className="pt-2">
         <button
           onClick={handleGetDirections}
-          disabled={isLoadingRoute}
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors disabled:bg-blue-800 disabled:text-blue-300 cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors cursor-pointer"
         >
           <Navigation className="w-5 h-5" />
-          {isLoadingRoute ? 'Mencari Rute...' : 'Arahkan Rute (Directions)'}
+          Arahkan Rute (Directions)
         </button>
       </div>
 

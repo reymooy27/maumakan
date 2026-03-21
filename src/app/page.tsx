@@ -3,6 +3,8 @@
 import dynamic from 'next/dynamic';
 import Navbar from '@/components/layout/Navbar';
 import PlaceSidebar from '@/components/place/PlaceSidebar';
+import DirectionSidebar from '@/components/place/DirectionSidebar';
+import SearchSidebar from '@/components/search/SearchSidebar';
 
 // Leaflet needs to be loaded client-side only
 const MapView = dynamic(() => import('@/components/map/MapView'), {
@@ -28,8 +30,10 @@ export default function HomePage() {
       <div className="relative z-50">
         <Navbar />
       </div>
-      {/* Sidebar floats above everything */}
+      {/* Sidebars float above everything */}
       <PlaceSidebar />
+      <DirectionSidebar />
+      <SearchSidebar />
     </main>
   );
 }

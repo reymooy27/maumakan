@@ -31,21 +31,32 @@ const pulsingIcon = L.divIcon({
 });
 
 function MapEventHandler() {
-  const { setBounds, setCenter, setZoom } = useMapStore();
+  const setBounds = useMapStore((s) => s.setBounds);
+  const setCenter = useMapStore((s) => s.setCenter);
+  const setZoom = useMapStore((s) => s.setZoom);
 
   useMapEvents({
     moveend(e) {
       const map = e.target;
       const b = map.getBounds();
+      
+      // Update bounds for fetching
+      // Rounding to 4 decimal places resolves infinite updates during micro-pans (autoPan)
       setBounds({
-        north: b.getNorth(),
-        south: b.getSouth(),
-        east: b.getEast(),
-        west: b.getWest(),
+        north: Number(b.getNorth().toFixed(4)),
+        south: Number(b.getSouth().toFixed(4)),
+        east: Number(b.getEast().toFixed(4)),
+        west: Number(b.getWest().toFixed(4)),
       });
+
+      // Update center and zoom for overall app state
       const c = map.getCenter();
-      setCenter([c.lat, c.lng]);
-      setZoom(map.getZoom());
+      setCenter([
+        Math.round(c.lat * 1000000) / 1000000,
+        Math.round(c.lng * 1000000) / 1000000
+      ]);
+      // zoom set is already rounded in store, but we can round here too
+      setZoom(Math.round(map.getZoom() * 100) / 100);
     },
   });
 
@@ -53,20 +64,31 @@ function MapEventHandler() {
 }
 
 function LocationMarker() {
-  const { setCenter, userLocation, setUserLocation } = useMapStore();
-  const map = useMapEvents({});
+  const userLocation = useMapStore((s) => s.userLocation);
+  const setUserLocation = useMapStore((s) => s.setUserLocation);
+  const setCenter = useMapStore((s) => s.setCenter);
+  const map = useMap();
 
   useEffect(() => {
-    map.locate().on("locationfound", function (e) {
-      setUserLocation([e.latlng.lat, e.latlng.lng]);
-      setCenter([e.latlng.lat, e.latlng.lng]);
-      map.flyTo(e.latlng, map.getZoom());
-    });
-  }, [map, setCenter, setUserLocation]);
+    // Only fetch location once on mount
+    const onLocationFound = (e: L.LocationEvent) => {
+      const coords: [number, number] = [e.latlng.lat, e.latlng.lng];
+      setUserLocation(coords);
+      setCenter(coords);
+      map.flyTo(e.latlng, 15);
+    };
+
+    map.on("locationfound", onLocationFound);
+    map.locate();
+
+    return () => {
+      map.off("locationfound", onLocationFound);
+    };
+  }, [map, setUserLocation, setCenter]);
 
   return userLocation === null ? null : (
     <Marker position={userLocation} icon={pulsingIcon}>
-      <Popup>Lokasi Anda Saat Ini</Popup>
+      <Popup autoPan={false}>Lokasi Anda Saat Ini</Popup>
     </Marker>
   );
 }
@@ -75,9 +97,24 @@ function LocationMarker() {
 // but uses the map instance
 function LocateControl({ position }: { position: [number, number] | null }) {
   const map = useMap();
+  const selectedPlace = useMapStore((s) => s.selectedPlace);
+  const filterPanelOpen = useMapStore((s) => s.filterPanelOpen);
+  
+  const isSidebarOpen = !!selectedPlace;
+  const isFilterOpen = filterPanelOpen;
   
   return (
-    <div className="leaflet-bottom leaflet-right mb-6 mr-4 z-[1000] absolute bottom-0 right-0">
+    <div 
+      className={`
+        leaflet-bottom leaflet-right mb-6 mr-4 z-[1000] absolute bottom-0 right-0 
+        transition-all duration-300 ease-in-out
+        ${isSidebarOpen 
+          ? '-translate-y-[45vh] md:translate-y-0 md:-translate-x-[384px]' 
+          : isFilterOpen 
+            ? 'md:-translate-x-[320px]' 
+            : 'translate-x-0 translate-y-0'}
+      `}
+    >
       <div className="leaflet-control leaflet-bar">
         <button 
           onClick={(e) => {
@@ -114,20 +151,33 @@ function RouteFitter({ geometry }: { geometry: [number, number][] | null }) {
 }
 
 export default function MapView() {
-  const { center, zoom, userLocation, routeGeometry } = useMapStore();
+  const routeGeometry = useMapStore((s) => s.routeGeometry);
+  const userLocation = useMapStore((s) => s.userLocation);
   const { places } = usePlaces();
+
+  // Create stable initial values. MapContainer only uses them on mount.
+  // This prevents the common "snap back" issues in react-leaflet.
+  const [initialView] = useState(() => ({
+    center: useMapStore.getState().center,
+    zoom: useMapStore.getState().zoom
+  }));
 
   return (
     <div className="relative w-full h-full">
       <MapContainer
-        center={center}
-        zoom={zoom}
+        center={initialView.center}
+        zoom={initialView.zoom}
+        minZoom={3}
+        maxZoom={22}
         className="w-full h-full z-0"
         zoomControl={false}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          minZoom={3}
+          maxZoom={22}
+          maxNativeZoom={19}
         />
         <MapEventHandler />
         <LocationMarker />
@@ -147,7 +197,6 @@ export default function MapView() {
           <PlaceMarker key={place.id} place={place} />
         ))}
         
-        {/* Custom Recenter Button mapped to Leaflet controls */}
         <LocateControl position={userLocation} />
       </MapContainer>
     </div>

@@ -11,36 +11,56 @@ export async function GET(req: NextRequest) {
   const west = searchParams.get('west');
   const search = searchParams.get('search') || '';
   const minRating = parseFloat(searchParams.get('minRating') || '0');
-  const priceRange = searchParams.getAll('priceRange').map(Number).filter((n) => !isNaN(n));
+  const minPrice = parseInt(searchParams.get('minPrice') || '0');
+  const maxPrice = parseInt(searchParams.get('maxPrice') || '500000');
+  const isOpenNow = searchParams.get('isOpenNow') === 'true';
+  const currentTime = parseInt(searchParams.get('currentTime') || '-1'); // Minutes from midnight
 
   try {
-    // Build the where clause explicitly to avoid spread short-circuit issues
-    const where: Prisma.PlaceWhereInput = {};
+    // Build an array of AND conditions
+    const andConditions: Prisma.PlaceWhereInput[] = [
+      { avgPrice: { gte: minPrice, lte: maxPrice } }
+    ];
 
     if (search) {
-      where.name = { contains: search, mode: 'insensitive' };
+      andConditions.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { menuItems: { some: { name: { contains: search, mode: 'insensitive' } } } }
+        ]
+      });
     }
 
     if (minRating > 0) {
-      where.rating = { gte: minRating };
+      andConditions.push({ rating: { gte: minRating } });
     }
 
-    if (priceRange.length > 0) {
-      where.priceRange = { in: priceRange };
-    }
-
-    // Only apply bounds filter when ALL four values are present
     if (north && south && east && west) {
-      where.lat = { gte: parseFloat(south), lte: parseFloat(north) };
-      where.lng = { gte: parseFloat(west), lte: parseFloat(east) };
+      andConditions.push({
+        lat: { gte: parseFloat(south), lte: parseFloat(north) },
+        lng: { gte: parseFloat(west), lte: parseFloat(east) }
+      });
     }
 
-    const places = await prisma.place.findMany({
+    const where: Prisma.PlaceWhereInput = { AND: andConditions };
+
+    let places = await prisma.place.findMany({
       where,
       include: { menuItems: true },
       orderBy: { rating: 'desc' },
       take: 100,
     });
+
+    if (isOpenNow && currentTime !== -1) {
+      places = places.filter((p) => {
+        // Handle overnight closing (e.g., 22:00 to 02:00)
+        if (p.openTime <= p.closeTime) {
+          return currentTime >= p.openTime && currentTime <= p.closeTime;
+        } else {
+          return currentTime >= p.openTime || currentTime <= p.closeTime;
+        }
+      });
+    }
 
     return NextResponse.json(places);
   } catch (err) {
@@ -56,14 +76,24 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, type, address, lat, lng, priceRange, imageUrl } = body;
+    const { name, type, address, lat, lng, avgPrice, openTime, closeTime, imageUrl } = body;
 
     if (!name || !type || lat == null || lng == null) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
     const place = await prisma.place.create({
-      data: { name, type, address, lat, lng, priceRange: priceRange ?? 1, imageUrl },
+      data: { 
+        name, 
+        type, 
+        address, 
+        lat, 
+        lng, 
+        avgPrice: avgPrice ?? 0, 
+        openTime: openTime ?? 480, 
+        closeTime: closeTime ?? 1320, 
+        imageUrl 
+      },
     });
 
     return NextResponse.json(place, { status: 201 });

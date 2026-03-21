@@ -21,7 +21,7 @@ export default function Navbar() {
       absolute top-0 left-0 right-0 z-30
       flex items-center gap-3 px-4 py-3
       bg-gradient-to-b from-gray-950/80 to-transparent
-      pointer-events-none z-[9999]
+      pointer-events-none
     ">
       {/* Logo */}
       <Link
