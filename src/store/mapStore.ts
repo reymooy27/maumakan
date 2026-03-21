@@ -26,6 +26,12 @@ interface MapStore {
   // Search
   searchQuery: string;
   setSearchQuery: (query: string) => void;
+
+  // Routing and User Location
+  userLocation: [number, number] | null;
+  setUserLocation: (location: [number, number] | null) => void;
+  routeGeometry: [number, number][] | null;
+  setRouteGeometry: (geometry: [number, number][] | null) => void;
 }
 
 const DEFAULT_FILTERS: Filters = {
@@ -47,11 +53,15 @@ export const useMapStore = create<MapStore>((set) => ({
 
   selectedPlace: null,
   setSelectedPlace: (place) =>
-    set({ selectedPlace: place, ...(place ? { filterPanelOpen: false } : {}) }),
+    set({ 
+      selectedPlace: place, 
+      routeGeometry: null, // Clear route when selection changes
+      ...(place ? { filterPanelOpen: false } : {}) 
+    }),
 
   filterPanelOpen: false,
   setFilterPanelOpen: (open) =>
-    set({ filterPanelOpen: open, ...(open ? { selectedPlace: null } : {}) }),
+    set({ filterPanelOpen: open, ...(open ? { selectedPlace: null, routeGeometry: null } : {}) }),
 
   filters: DEFAULT_FILTERS,
   setFilters: (partial) =>
@@ -60,4 +70,9 @@ export const useMapStore = create<MapStore>((set) => ({
 
   searchQuery: '',
   setSearchQuery: (query) => set({ searchQuery: query }),
+
+  userLocation: null,
+  setUserLocation: (location) => set({ userLocation: location }),
+  routeGeometry: null,
+  setRouteGeometry: (geometry) => set({ routeGeometry: geometry }),
 }));

@@ -4,7 +4,7 @@ import { usePlaces } from '@/hooks/usePlaces';
 import { useMapStore } from '@/store/mapStore';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, useMapEvents, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, useMapEvents, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import PlaceMarker from './PlaceMarker';
 import L from 'leaflet';
 import { LocateFixed } from 'lucide-react';
@@ -52,20 +52,20 @@ function MapEventHandler() {
   return null;
 }
 
-function LocationMarker({ position, setPosition }: { position: [number, number] | null, setPosition: (pos: [number, number]) => void }) {
-  const { setCenter } = useMapStore();
+function LocationMarker() {
+  const { setCenter, userLocation, setUserLocation } = useMapStore();
   const map = useMapEvents({});
 
   useEffect(() => {
     map.locate().on("locationfound", function (e) {
-      setPosition([e.latlng.lat, e.latlng.lng]);
+      setUserLocation([e.latlng.lat, e.latlng.lng]);
       setCenter([e.latlng.lat, e.latlng.lng]);
       map.flyTo(e.latlng, map.getZoom());
     });
-  }, [map, setCenter, setPosition]);
+  }, [map, setCenter, setUserLocation]);
 
-  return position === null ? null : (
-    <Marker position={position} icon={pulsingIcon}>
+  return userLocation === null ? null : (
+    <Marker position={userLocation} icon={pulsingIcon}>
       <Popup>Lokasi Anda Saat Ini</Popup>
     </Marker>
   );
@@ -99,10 +99,23 @@ function LocateControl({ position }: { position: [number, number] | null }) {
   );
 }
 
+// Auto fit bounds to route when a route is drawn
+function RouteFitter({ geometry }: { geometry: [number, number][] | null }) {
+  const map = useMap();
+  
+  useEffect(() => {
+    if (geometry && geometry.length > 0) {
+      const bounds = L.latLngBounds(geometry);
+      map.fitBounds(bounds, { padding: [50, 50] });
+    }
+  }, [geometry, map]);
+  
+  return null;
+}
+
 export default function MapView() {
-  const { center, zoom } = useMapStore();
+  const { center, zoom, userLocation, routeGeometry } = useMapStore();
   const { places } = usePlaces();
-  const [position, setPosition] = useState<[number, number] | null>(null);
 
   return (
     <div className="relative w-full h-full">
@@ -117,13 +130,25 @@ export default function MapView() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <MapEventHandler />
-        <LocationMarker position={position} setPosition={setPosition} />
+        <LocationMarker />
+        
+        {/* Draw Route Polyline if present */}
+        {routeGeometry && routeGeometry.length > 0 && (
+          <Polyline 
+            positions={routeGeometry} 
+            pathOptions={{ color: '#3b82f6', weight: 5, opacity: 0.7, dashArray: '10, 10', lineJoin: 'round' }} 
+          />
+        )}
+        
+        {/* Auto fit map bounds when a route is drawn */}
+        <RouteFitter geometry={routeGeometry} />
+
         {places.map((place) => (
           <PlaceMarker key={place.id} place={place} />
         ))}
         
         {/* Custom Recenter Button mapped to Leaflet controls */}
-        <LocateControl position={position} />
+        <LocateControl position={userLocation} />
       </MapContainer>
     </div>
   );

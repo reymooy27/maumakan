@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
-import { X, Star, MapPin, DollarSign } from 'lucide-react';
+import { X, Star, MapPin, DollarSign, Navigation } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
 import MenuList from './MenuList';
 
@@ -214,6 +214,40 @@ function SheetContent({ place: p }: { place: NonNullable<ReturnType<typeof useMa
    Shared place detail section
    ─────────────────────────────────────────────────────────── */
 function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMapStore.getState>['selectedPlace']> }) {
+  const { userLocation, setRouteGeometry } = useMapStore();
+  const [isLoadingRoute, setIsLoadingRoute] = useState(false);
+
+  const handleGetDirections = async () => {
+    if (!userLocation) {
+      alert('Lokasi Anda belum ditemukan atau GPS tidak aktif.');
+      return;
+    }
+
+    setIsLoadingRoute(true);
+    try {
+      // OSRM expects coordinates in lon,lat format
+      const start = `${userLocation[1]},${userLocation[0]}`;
+      const end = `${p.lng},${p.lat}`;
+      const url = `https://router.project-osrm.org/route/v1/driving/${start};${end}?overview=full&geometries=geojson`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.code === 'Ok' && data.routes && data.routes.length > 0) {
+        // GeoJSON coordinates are [lon, lat], Leaflet Polyline needs [lat, lon]
+        const coords = data.routes[0].geometry.coordinates.map((c: [number, number]) => [c[1], c[0]]);
+        setRouteGeometry(coords);
+      } else {
+        alert('Rute ke lokasi ini tidak ditemukan.');
+      }
+    } catch (err) {
+      console.error('Failed to fetch route:', err);
+      alert('Gagal mengambil rute. Pastikan Anda memiliki koneksi internet.');
+    } finally {
+      setIsLoadingRoute(false);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto p-5 space-y-4">
       {/* Header */}
@@ -240,7 +274,7 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
           {p.distance != null && (
             <div className="flex items-center gap-1 text-gray-400">
               <MapPin className="w-4 h-4" />
-              <span className="text-sm">{p.distance.toFixed(1)} km away</span>
+              <span className="text-sm">{p.distance.toFixed(1)} km</span>
             </div>
           )}
         </div>
@@ -253,8 +287,20 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
         )}
       </div>
 
+      {/* Action Buttons */}
+      <div className="pt-2">
+        <button
+          onClick={handleGetDirections}
+          disabled={isLoadingRoute}
+          className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors disabled:bg-blue-800 disabled:text-blue-300 cursor-pointer"
+        >
+          <Navigation className="w-5 h-5" />
+          {isLoadingRoute ? 'Mencari Rute...' : 'Arahkan Rute (Directions)'}
+        </button>
+      </div>
+
       {/* Menu */}
-      <div>
+      <div className="pt-2">
         <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">
           Menu
         </h2>
