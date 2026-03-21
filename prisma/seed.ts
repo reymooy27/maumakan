@@ -1,5 +1,6 @@
 // We reuse the configured Prisma client from the app to handle the adapter correctly
 import { prisma } from '../src/lib/prisma';
+import { PlaceType } from '@prisma/client';
 
 async function main() {
   console.log('Seeding places in Kupang...');
@@ -7,7 +8,7 @@ async function main() {
   const kupangPlaces = [
     {
       name: 'Salome 99',
-      type: 'food_stall',
+      type: PlaceType.food_stall,
       address: 'Jl. W. J. Lalamentik, Oebobo, Kupang',
       lat: -10.1582,
       lng: 123.6069,
@@ -17,7 +18,7 @@ async function main() {
     },
     {
       name: 'Sei Babi Ba\'i',
-      type: 'restaurant',
+      type: PlaceType.restaurant,
       address: 'Jl. H.R. Koroh, Walikota, Kupang',
       lat: -10.1705,
       lng: 123.6074,
@@ -27,7 +28,7 @@ async function main() {
     },
     {
       name: 'Warung Artis',
-      type: 'food_stall',
+      type: PlaceType.food_stall,
       address: 'Pantai Kelapa Lima, Kupang',
       lat: -10.1495,
       lng: 123.5901,
@@ -37,7 +38,7 @@ async function main() {
     },
     {
       name: 'Cafe La Haba',
-      type: 'cafe',
+      type: PlaceType.cafe,
       address: 'Jl. El Tari, Oebobo, Kupang',
       lat: -10.1610,
       lng: 123.6005,
@@ -47,7 +48,7 @@ async function main() {
     },
     {
       name: 'Kampoeng Nelayan Restaurant',
-      type: 'restaurant',
+      type: PlaceType.restaurant,
       address: 'Jl. Timor Raya, Pasir Panjang, Kupang',
       lat: -10.1432,
       lng: 123.5985,
