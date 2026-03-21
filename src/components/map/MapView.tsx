@@ -4,9 +4,10 @@ import { usePlaces } from '@/hooks/usePlaces';
 import { useMapStore } from '@/store/mapStore';
 import 'leaflet/dist/leaflet.css';
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, useMapEvents, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer, useMapEvents, Marker, Popup, useMap } from 'react-leaflet';
 import PlaceMarker from './PlaceMarker';
 import L from 'leaflet';
+import { LocateFixed } from 'lucide-react';
 
 // Fix Leaflet's default icon issue in React
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -16,14 +17,17 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
 
-// Custom icon for the user's current location
-const userIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
+// HTML Div Icon for Heartbeat Animation
+const pulsingIcon = L.divIcon({
+  className: 'custom-pulsing-icon',
+  html: `
+    <div class="relative flex justify-center items-center w-6 h-6">
+      <div class="absolute w-full h-full bg-blue-500 rounded-full animate-ping opacity-75"></div>
+      <div class="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
 function MapEventHandler() {
@@ -48,8 +52,7 @@ function MapEventHandler() {
   return null;
 }
 
-function LocationMarker() {
-  const [position, setPosition] = useState<[number, number] | null>(null);
+function LocationMarker({ position, setPosition }: { position: [number, number] | null, setPosition: (pos: [number, number]) => void }) {
   const { setCenter } = useMapStore();
   const map = useMapEvents({});
 
@@ -59,18 +62,47 @@ function LocationMarker() {
       setCenter([e.latlng.lat, e.latlng.lng]);
       map.flyTo(e.latlng, map.getZoom());
     });
-  }, [map, setCenter]);
+  }, [map, setCenter, setPosition]);
 
   return position === null ? null : (
-    <Marker position={position} icon={userIcon}>
+    <Marker position={position} icon={pulsingIcon}>
       <Popup>Lokasi Anda Saat Ini</Popup>
     </Marker>
+  );
+}
+
+// Custom control component that sits outside the React-Leaflet Map context
+// but uses the map instance
+function LocateControl({ position }: { position: [number, number] | null }) {
+  const map = useMap();
+  
+  return (
+    <div className="leaflet-bottom leaflet-right mb-6 mr-4 z-[1000] absolute bottom-0 right-0">
+      <div className="leaflet-control leaflet-bar">
+        <button 
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (position) {
+              map.flyTo(position, 15, { animate: true, duration: 1 });
+            } else {
+              map.locate();
+            }
+          }}
+          className="bg-white hover:bg-gray-100 text-blue-600 w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-colors"
+          title="Ke Lokasi Saya"
+        >
+          <LocateFixed size={24} strokeWidth={2.5} />
+        </button>
+      </div>
+    </div>
   );
 }
 
 export default function MapView() {
   const { center, zoom } = useMapStore();
   const { places } = usePlaces();
+  const [position, setPosition] = useState<[number, number] | null>(null);
 
   return (
     <div className="relative w-full h-full">
@@ -85,10 +117,13 @@ export default function MapView() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <MapEventHandler />
-        <LocationMarker />
+        <LocationMarker position={position} setPosition={setPosition} />
         {places.map((place) => (
           <PlaceMarker key={place.id} place={place} />
         ))}
+        
+        {/* Custom Recenter Button mapped to Leaflet controls */}
+        <LocateControl position={position} />
       </MapContainer>
     </div>
   );
