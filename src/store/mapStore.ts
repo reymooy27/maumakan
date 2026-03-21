@@ -55,7 +55,6 @@ export const useMapStore = create<MapStore>((set) => ({
   setSelectedPlace: (place) =>
     set({ 
       selectedPlace: place, 
-      routeGeometry: null, // Clear route when selection changes
       ...(place ? { filterPanelOpen: false } : {}) 
     }),
 

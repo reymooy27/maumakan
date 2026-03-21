@@ -136,7 +136,7 @@ export default function MapView() {
         {routeGeometry && routeGeometry.length > 0 && (
           <Polyline 
             positions={routeGeometry} 
-            pathOptions={{ color: '#3b82f6', weight: 5, opacity: 0.7, dashArray: '10, 10', lineJoin: 'round' }} 
+            pathOptions={{ color: '#3b82f6', weight: 6, opacity: 0.9, lineJoin: 'round', lineCap: 'round' }} 
           />
         )}
         
