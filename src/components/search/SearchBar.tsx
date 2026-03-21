@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { Search, X } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
+import { Search, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function SearchBar() {
   const { searchQuery, setSearchQuery, setSearchSidebarOpen } = useMapStore();
@@ -51,7 +51,7 @@ export default function SearchBar() {
       <div className="absolute left-3 text-gray-400 w-4 h-4 pointer-events-none group-focus-within:text-orange-500 transition-colors">
         <Search className="w-full h-full" />
       </div>
-      
+
       <input
         ref={inputRef}
         type="text"
@@ -60,7 +60,7 @@ export default function SearchBar() {
         onKeyDown={handleKeyDown}
         placeholder="Search restaurants, cafes… (⌘K)"
         className="
-          w-full pl-10 pr-24 py-3
+          w-full pl-4 pr-24 py-3
           bg-gray-900/95 backdrop-blur-md shadow-lg
           border border-gray-700/50 rounded-2xl
           text-sm text-white placeholder-gray-500
@@ -84,8 +84,8 @@ export default function SearchBar() {
           disabled={!localQuery.trim()}
           className={`
             px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide transition-all duration-300
-            ${localQuery.trim() 
-              ? 'bg-orange-500 text-white shadow-[0_0_15px_-3px_#f97316] hover:bg-orange-600 cursor-pointer' 
+            ${localQuery.trim()
+              ? 'bg-orange-500 text-white shadow-[0_0_15px_-3px_#f97316] hover:bg-orange-600 cursor-pointer'
               : 'bg-gray-800 text-gray-500 cursor-not-allowed'}
           `}
         >

@@ -15,6 +15,10 @@ export async function GET(req: NextRequest) {
   const maxPrice = parseInt(searchParams.get('maxPrice') || '500000');
   const isOpenNow = searchParams.get('isOpenNow') === 'true';
   const currentTime = parseInt(searchParams.get('currentTime') || '-1'); // Minutes from midnight
+  const amenitiesParam = searchParams.get('amenities');
+  const dietaryParam = searchParams.get('dietary');
+  const amenities = amenitiesParam ? amenitiesParam.split(',').filter(Boolean) : [];
+  const dietary = dietaryParam ? dietaryParam.split(',').filter(Boolean) : [];
 
   try {
     // Build an array of AND conditions
@@ -39,6 +43,18 @@ export async function GET(req: NextRequest) {
       andConditions.push({
         lat: { gte: parseFloat(south), lte: parseFloat(north) },
         lng: { gte: parseFloat(west), lte: parseFloat(east) }
+      });
+    }
+
+    if (amenities.length > 0) {
+      andConditions.push({
+        amenities: { hasEvery: amenities } // Place must have ALL selected amenities
+      });
+    }
+
+    if (dietary.length > 0) {
+      andConditions.push({
+        menuItems: { some: { dietaryTags: { hasSome: dietary } } } // Place must have AT LEAST ONE menu item matching ANY of the selected dietary tags
       });
     }
 

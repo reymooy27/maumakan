@@ -7,7 +7,8 @@ import { Place } from '@/types';
 
 /* ── snap-point heights (vh) ── */
 const SNAP_PEEK = 25;
-const SNAP_FULL = 75;
+const SNAP_FULL = 50;  // Default open at 50%
+const SNAP_MAX = 100;  // Can expand to 100%
 const DISMISS_THRESHOLD = 20;
 
 export default function SearchSidebar() {
@@ -23,6 +24,7 @@ export default function SearchSidebar() {
     setSelectedPlace,
     setZoom,
     setHoveredPlaceId,
+    filters,
   } = useMapStore();
 
   /* ── bottom-sheet state (mobile) ── */
@@ -48,8 +50,13 @@ export default function SearchSidebar() {
       setError(null);
 
       try {
-        // Fetch all places matching the query, regardless of map bounds
-        const url = `/api/places?search=${encodeURIComponent(searchQuery)}`;
+        // Fetch all places matching the query, taking active amenities/dietary tags into account
+        const params = new URLSearchParams();
+        params.set('search', searchQuery);
+        if (filters.amenities.length > 0) params.set('amenities', filters.amenities.join(','));
+        if (filters.dietaryTags.length > 0) params.set('dietary', filters.dietaryTags.join(','));
+        
+        const url = `/api/places?${params.toString()}`;
         const res = await fetch(url);
         const data = await res.json();
 
@@ -89,7 +96,7 @@ export default function SearchSidebar() {
     fetchResults();
 
     return () => { active = false; };
-  }, [searchSidebarOpen, searchQuery, center, setSearchResults]);
+  }, [searchSidebarOpen, searchQuery, center, setSearchResults, filters.amenities, filters.dietaryTags]);
 
   /* ── open / close animation ── */
   useEffect(() => {
@@ -125,7 +132,7 @@ export default function SearchSidebar() {
     if (!dragging.current) return;
     const deltaY = startY.current - e.clientY;
     const deltaVh = (deltaY / window.innerHeight) * 100;
-    const newHeight = Math.max(10, Math.min(SNAP_FULL, startHeight.current + deltaVh));
+    const newHeight = Math.max(10, Math.min(SNAP_MAX, startHeight.current + deltaVh));
     setSheetHeight(newHeight);
   }, []);
 
@@ -138,8 +145,10 @@ export default function SearchSidebar() {
       close();
     } else if (sheetHeight < (SNAP_PEEK + SNAP_FULL) / 2) {
       setSheetHeight(SNAP_PEEK);
-    } else {
+    } else if (sheetHeight < (SNAP_FULL + SNAP_MAX) / 2) {
       setSheetHeight(SNAP_FULL);
+    } else {
+      setSheetHeight(SNAP_MAX);
     }
   }, [sheetHeight, close]);
 
@@ -182,7 +191,7 @@ export default function SearchSidebar() {
         onPointerCancel={onPointerUp}
         style={{ height: `${sheetHeight}vh` }}
         className={`
-          md:hidden fixed bottom-0 left-0 right-0 z-50
+          md:hidden fixed bottom-0 left-0 right-0 z-[60]
           bg-gray-900 border-t border-gray-800 rounded-t-2xl
           flex flex-col overflow-hidden touch-none shadow-[0_-10px_40px_rgba(0,0,0,0.5)]
           ${isDragging ? '' : 'transition-[height] duration-300 ease-out'}
@@ -196,9 +205,9 @@ export default function SearchSidebar() {
 
         <button
           onClick={close}
-          className="absolute top-3 right-3 z-10 p-1.5 bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors cursor-pointer"
+          className="absolute top-4 right-4 z-20 p-2 bg-gray-800/80 backdrop-blur-md border border-gray-700 rounded-full text-white hover:text-orange-400 transition-all cursor-pointer shadow-xl"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5 shadow-sm" />
         </button>
 
         <div

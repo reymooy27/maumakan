@@ -18,6 +18,10 @@ export interface Place {
   menuItems?: MenuItem[];
   reviews?: Review[];
   distance?: number; // km, computed client-side
+  amenities?: string[];
+  photos?: Photo[];
+  checkIns?: CheckIn[];
+  crowdReports?: CrowdReport[];
 }
 
 export interface MenuItem {
@@ -27,6 +31,8 @@ export interface MenuItem {
   price: number;
   description?: string;
   imageUrl?: string;
+  dietaryTags?: string[];
+  photos?: Photo[];
 }
 
 export interface Review {
@@ -36,6 +42,33 @@ export interface Review {
   rating: number;
   comment?: string;
   createdAt: string;
+  photos?: Photo[];
+}
+
+export interface Photo {
+  id: string;
+  url: string;
+  caption?: string;
+  createdAt: string;
+  userId?: string;
+  placeId?: string;
+  menuItemId?: string;
+  reviewId?: string;
+}
+
+export interface CheckIn {
+  id: string;
+  userId: string;
+  placeId: string;
+  createdAt: string;
+}
+
+export interface CrowdReport {
+  id: string;
+  userId: string;
+  placeId: string;
+  status: string; // "Busy" | "Quiet" | "Normal"
+  createdAt: string;
 }
 
 export interface Filters {
@@ -44,6 +77,9 @@ export interface Filters {
   minRating: number;    // 0–5
   maxDistance: number;  // km, 0 = unlimited
   isOpenNow: boolean;
+  amenities: string[];
+  dietaryTags: string[];
+  onlySaved: boolean; // New: Toggle for favorites view
 }
 
 export interface MapBounds {

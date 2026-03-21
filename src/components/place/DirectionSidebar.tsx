@@ -6,7 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 /* ── snap-point heights (vh) ── */
 const SNAP_PEEK = 25;
-const SNAP_FULL = 75;
+const SNAP_FULL = 50;  // Default open at 50%
+const SNAP_MAX = 100;  // Can expand to 100%
 const DISMISS_THRESHOLD = 20;
 
 export default function DirectionSidebar() {
@@ -110,7 +111,7 @@ export default function DirectionSidebar() {
     if (!dragging.current) return;
     const deltaY = startY.current - e.clientY;
     const deltaVh = (deltaY / window.innerHeight) * 100;
-    const newHeight = Math.max(10, Math.min(SNAP_FULL, startHeight.current + deltaVh));
+    const newHeight = Math.max(10, Math.min(SNAP_MAX, startHeight.current + deltaVh));
     setSheetHeight(newHeight);
   }, []);
 
@@ -123,8 +124,10 @@ export default function DirectionSidebar() {
       close();
     } else if (sheetHeight < (SNAP_PEEK + SNAP_FULL) / 2) {
       setSheetHeight(SNAP_PEEK);
-    } else {
+    } else if (sheetHeight < (SNAP_FULL + SNAP_MAX) / 2) {
       setSheetHeight(SNAP_FULL);
+    } else {
+      setSheetHeight(SNAP_MAX);
     }
   }, [sheetHeight, close]);
 
@@ -150,6 +153,7 @@ export default function DirectionSidebar() {
           isLoading={isLoading}
           routeData={routeData}
           routeError={routeError}
+          isMobile={false}
         />
       </aside>
 
@@ -162,7 +166,7 @@ export default function DirectionSidebar() {
         onPointerCancel={onPointerUp}
         style={{ height: `${sheetHeight}vh` }}
         className={`
-          md:hidden fixed bottom-0 left-0 right-0 z-50
+          md:hidden fixed bottom-0 left-0 right-0 z-[60]
           bg-gray-900 border-t border-gray-800 rounded-t-2xl
           flex flex-col overflow-hidden touch-none shadow-[0_-10px_40px_rgba(0,0,0,0.5)]
           ${isDragging ? '' : 'transition-[height] duration-300 ease-out'}
@@ -176,9 +180,9 @@ export default function DirectionSidebar() {
 
         <button
           onClick={close}
-          className="absolute top-3 right-3 z-10 p-1.5 bg-gray-800 rounded-full text-gray-400 hover:text-white transition-colors cursor-pointer"
+          className="absolute top-4 right-4 z-20 p-2 bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-full text-white hover:text-orange-400 transition-all cursor-pointer shadow-xl"
         >
-          <X className="w-4 h-4" />
+          <X className="w-5 h-5 shadow-sm" />
         </button>
 
         <div
@@ -198,6 +202,7 @@ export default function DirectionSidebar() {
             isLoading={isLoading}
             routeData={routeData}
             routeError={routeError}
+            isMobile={true}
           />
         </div>
       </div>
@@ -212,7 +217,8 @@ function SidebarContent({
   setTransportMode,
   isLoading,
   routeData,
-  routeError
+  routeError,
+  isMobile
 }: {
   selectedPlace: any;
   onClose: () => void;
@@ -221,6 +227,7 @@ function SidebarContent({
   isLoading: boolean;
   routeData: { distance: number; duration: number } | null;
   routeError: string | null;
+  isMobile: boolean;
 }) {
 
   function formatDuration(seconds: number) {
@@ -238,99 +245,98 @@ function SidebarContent({
 
   return (
     <div className="flex flex-col h-full w-full">
-      {/* ── Header Area ── */}
-      <div className="bg-orange-600 px-5 pt-10 pb-4 flex-shrink-0 text-white shadow-md relative">
-        {/* <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-1.5 bg-orange-700/50 rounded-full text-white hover:bg-orange-700 transition-colors cursor-pointer md:hidden"
-        >
-          <X className="w-4 h-4" />
-        </button> */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-1.5 bg-orange-700/50 rounded-full text-white hover:bg-orange-700 transition-colors cursor-pointer hidden md:flex"
-        >
-          <X className="w-4 h-4" />
-        </button>
+      <div className={`flex flex-col ${isMobile ? '' : 'h-full'}`}>
+        {/* ── Header Area ── */}
+        <div className="bg-orange-600 px-5 pt-10 pb-6 flex-shrink-0 text-white shadow-md relative">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 p-1.5 bg-orange-700/50 rounded-full text-white hover:bg-orange-700 transition-colors cursor-pointer hidden md:flex"
+          >
+            <X className="w-4 h-4" />
+          </button>
 
-        <h2 className="text-xl font-bold mb-4 pr-8">Directions</h2>
+          <h2 className="text-xl font-bold mb-4 pr-8">Directions</h2>
 
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center flex-shrink-0">
-              <div className="w-1.5 h-1.5 bg-white rounded-full" />
+          <div className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center flex-shrink-0">
+                <div className="w-1.5 h-1.5 bg-white rounded-full" />
+              </div>
+              <div className="flex-1 bg-orange-700/50 rounded-lg px-3 py-2 text-sm text-orange-100 placeholder-orange-300 outline-none border border-transparent focus:border-white/30 transition-colors pointer-events-none">
+                Lokasi Anda (Your Location)
+              </div>
             </div>
-            <div className="flex-1 bg-orange-700/50 rounded-lg px-3 py-2 text-sm text-orange-100 placeholder-orange-300 outline-none border border-transparent focus:border-white/30 transition-colors pointer-events-none">
-              Lokasi Anda (Your Location)
+            <div className="flex items-center gap-3">
+              <MapPin className="w-4 h-4 text-orange-300 flex-shrink-0" fill="currentColor" />
+              <div className="flex-1 bg-orange-700/50 rounded-lg px-3 py-2 text-sm text-white font-medium outline-none border border-transparent focus:border-white/30 transition-colors truncate">
+                {selectedPlace.name}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <MapPin className="w-4 h-4 text-orange-300 flex-shrink-0" fill="currentColor" />
-            <div className="flex-1 bg-orange-700/50 rounded-lg px-3 py-2 text-sm text-white font-medium outline-none border border-transparent focus:border-white/30 transition-colors truncate">
-              {selectedPlace.name}
-            </div>
+
+          {/* ── Transport Modes ── */}
+          <div className="flex gap-2 mt-5">
+            <button
+              onClick={() => setTransportMode('driving')}
+              className={`flex-1 py-2.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'driving' ? 'bg-white text-orange-600 shadow-md' : 'text-orange-100 hover:bg-orange-500/50'}`}
+            >
+              <Car className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setTransportMode('bike')}
+              className={`flex-1 py-2.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'bike' ? 'bg-white text-orange-600 shadow-md' : 'text-orange-100 hover:bg-orange-500/50'}`}
+            >
+              <Bike className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setTransportMode('foot')}
+              className={`flex-1 py-2.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'foot' ? 'bg-white text-orange-600 shadow-md' : 'text-orange-100 hover:bg-orange-500/50'}`}
+            >
+              <Footprints className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
-        {/* ── Transport Modes ── */}
-        <div className="flex gap-2 mt-5">
-          <button
-            onClick={() => setTransportMode('driving')}
-            className={`flex-1 py-2 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'driving' ? 'bg-white text-orange-600' : 'text-orange-100 hover:bg-orange-500/50'}`}
-          >
-            <Car className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setTransportMode('bike')}
-            className={`flex-1 py-2 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'bike' ? 'bg-white text-orange-600' : 'text-orange-100 hover:bg-orange-500/50'}`}
-          >
-            <Bike className="w-5 h-5" />
-          </button>
-          <button
-            onClick={() => setTransportMode('foot')}
-            className={`flex-1 py-2 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'foot' ? 'bg-white text-orange-600' : 'text-orange-100 hover:bg-orange-500/50'}`}
-          >
-            <Footprints className="w-5 h-5" />
-          </button>
-        </div>
-      </div>
-
-      {/* ── Body Content ── */}
-      <div className="flex-1 overflow-y-auto bg-gray-900 p-3 space-y-3">
-        {isLoading ? (
-           <div className="bg-gray-800 rounded-xl p-4 flex flex-col gap-3 animate-pulse border border-gray-700">
-             <div className="h-6 w-1/3 bg-gray-700 rounded-md"></div>
-             <div className="h-4 w-1/4 bg-gray-700 rounded-md"></div>
-           </div>
-        ) : routeError ? (
-           <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm">
-             {routeError}
-           </div>
-        ) : routeData ? (
-           <div className="bg-gray-800 border-l-4 border-orange-500 p-4 rounded-xl rounded-l-md shadow-sm">
-             <div className="flex justify-between items-start">
-               <div>
-                 <h3 className="text-2xl font-bold text-green-400">
-                   {formatDuration(routeData.duration)}
-                 </h3>
-                 <p className="text-gray-400 text-sm mt-1">
-                   {formatDistance(routeData.distance)}
-                 </p>
-               </div>
-               <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center text-orange-400">
-                 {transportMode === 'driving' ? <Car className="w-4 h-4" /> : transportMode === 'bike' ? <Bike className="w-4 h-4" /> : <Footprints className="w-4 h-4" />}
-               </div>
+        {/* ── Body Content ── */}
+        <div className={`p-4 space-y-4 bg-gray-900 ${isMobile ? '' : 'flex-1 overflow-y-auto'}`}>
+          {isLoading ? (
+             <div className="bg-gray-800 rounded-xl p-5 flex flex-col gap-3 animate-pulse border border-gray-700">
+               <div className="h-6 w-1/3 bg-gray-700 rounded-md"></div>
+               <div className="h-4 w-1/4 bg-gray-700 rounded-md"></div>
              </div>
+          ) : routeError ? (
+             <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm flex items-center gap-3">
+               <div className="w-2 h-2 bg-red-500 rounded-full" />
+               {routeError}
+             </div>
+          ) : routeData ? (
+             <div className="bg-gray-800 border-l-4 border-orange-500 p-5 rounded-xl rounded-l-md shadow-lg border border-gray-700/50">
+               <div className="flex justify-between items-start mb-4">
+                 <div>
+                   <h3 className="text-3xl font-bold text-green-400 tracking-tight">
+                     {formatDuration(routeData.duration)}
+                   </h3>
+                   <p className="text-gray-400 text-sm mt-1 flex items-center gap-1.5">
+                     <Navigation2 className="w-3 h-3 text-orange-500" />
+                     {formatDistance(routeData.distance)}
+                   </p>
+                 </div>
+                 <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
+                   {transportMode === 'driving' ? <Car className="w-5 h-5" /> : transportMode === 'bike' ? <Bike className="w-5 h-5" /> : <Footprints className="w-5 h-5" />}
+                 </div>
+               </div>
 
-             <button className="w-full mt-4 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white py-2.5 rounded-lg font-semibold text-sm transition-colors cursor-pointer">
-               <Navigation2 className="w-4 h-4" /> Start Navigation
-             </button>
-           </div>
-        ) : (
-           <div className="text-gray-500 text-sm text-center mt-10">
-             Pilih mode transportasi untuk melihat rute.
-           </div>
-        )}
+               <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.98] cursor-pointer">
+                 <Navigation2 className="w-4 h-4 fill-current" />
+                 Start Rute
+               </button>
+             </div>
+          ) : (
+             <div className="text-gray-500 text-sm text-center py-10 opacity-60 italic">
+               Pilih mode transportasi untuk melihat rute.
+             </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -63,6 +63,26 @@ function MapEventHandler() {
   return null;
 }
 
+function ViewSync() {
+  const map = useMap();
+  const center = useMapStore((s) => s.center);
+  const zoom = useMapStore((s) => s.zoom);
+
+  useEffect(() => {
+    const mapCenter = map.getCenter();
+    const isSameCenter = 
+      Math.abs(mapCenter.lat - center[0]) < 0.0001 && 
+      Math.abs(mapCenter.lng - center[1]) < 0.0001;
+    const isSameZoom = Math.abs(map.getZoom() - zoom) < 0.1;
+
+    if (!isSameCenter || !isSameZoom) {
+      map.flyTo(center, zoom, { animate: true, duration: 1 });
+    }
+  }, [center, zoom, map]);
+
+  return null;
+}
+
 function LocationMarker() {
   const userLocation = useMapStore((s) => s.userLocation);
   const setUserLocation = useMapStore((s) => s.setUserLocation);
@@ -180,6 +200,7 @@ export default function MapView() {
           maxNativeZoom={19}
         />
         <MapEventHandler />
+        <ViewSync />
         <LocationMarker />
         
         {/* Draw Route Polyline if present */}

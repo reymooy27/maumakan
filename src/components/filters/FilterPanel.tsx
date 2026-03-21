@@ -4,6 +4,8 @@ import { SlidersHorizontal, X, RotateCcw } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
 
 const PRICE_LABELS = ['$', '$$', '$$$', '$$$$'];
+const AMENITIES_LIST = ['WiFi', 'Parking', 'AC', 'Toilet', 'Mushola'];
+const DIETARY_LIST = ['Halal', 'Vegan', 'Vegetarian', 'Gluten-Free'];
 
 export default function FilterPanel() {
   const { filters, setFilters, resetFilters, filterPanelOpen, setFilterPanelOpen } = useMapStore();
@@ -14,7 +16,7 @@ export default function FilterPanel() {
       <button
         onClick={() => setFilterPanelOpen(!filterPanelOpen)}
         className={`
-          flex items-center gap-2 px-4 py-2.5
+          flex items-center gap-2 px-3 py-2.5 sm:px-4
           bg-gray-900/90 backdrop-blur-sm border rounded-xl
           text-sm font-medium transition-all duration-200 cursor-pointer
           ${filterPanelOpen
@@ -23,7 +25,7 @@ export default function FilterPanel() {
         `}
       >
         <SlidersHorizontal className="w-4 h-4" />
-        Filters
+        <span className="hidden sm:block">Filters</span>
       </button>
 
       {/* Drawer */}
@@ -180,6 +182,60 @@ export default function FilterPanel() {
             />
             <div className="flex justify-between text-[10px] text-gray-500 mt-2">
               <span>0 km</span><span>10 km</span>
+            </div>
+          </div>
+
+          {/* Smart Filters: Amenities */}
+          <div className="pt-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Amenities</p>
+            <div className="flex flex-wrap gap-2">
+              {AMENITIES_LIST.map(amenity => (
+                <button
+                  key={amenity}
+                  onClick={() => {
+                    const current = filters.amenities;
+                    setFilters({
+                      amenities: current.includes(amenity)
+                        ? current.filter(a => a !== amenity)
+                        : [...current, amenity]
+                    });
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                    filters.amenities.includes(amenity)
+                      ? 'bg-orange-500/20 border-orange-500/50 text-orange-400'
+                      : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  {amenity}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Smart Filters: Dietary */}
+          <div className="pt-2 pb-6">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Dietary Options</p>
+            <div className="flex flex-wrap gap-2">
+              {DIETARY_LIST.map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => {
+                    const current = filters.dietaryTags;
+                    setFilters({
+                      dietaryTags: current.includes(tag)
+                        ? current.filter(t => t !== tag)
+                        : [...current, tag]
+                    });
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
+                    filters.dietaryTags.includes(tag)
+                      ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400'
+                      : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500'
+                  }`}
+                >
+                  {tag}
+                </button>
+              ))}
             </div>
           </div>
         </div>

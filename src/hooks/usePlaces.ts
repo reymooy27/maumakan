@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import useSWR from 'swr';
 import { Place, Filters } from '@/types';
 import { useMapStore } from '@/store/mapStore';
+import { useSavedPlaces } from './useSavedPlaces';
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -29,6 +30,8 @@ function buildUrl(bounds: ReturnType<typeof useMapStore.getState>['bounds'], fil
   if (filters.minRating > 0) params.set('minRating', String(filters.minRating));
   if (filters.minPrice > 0) params.set('minPrice', String(filters.minPrice));
   if (filters.maxPrice < 500000) params.set('maxPrice', String(filters.maxPrice));
+  if (filters.amenities.length > 0) params.set('amenities', filters.amenities.join(','));
+  if (filters.dietaryTags.length > 0) params.set('dietary', filters.dietaryTags.join(','));
   
   if (filters.isOpenNow) {
     params.set('isOpenNow', 'true');
@@ -47,6 +50,7 @@ export function usePlaces() {
   const filters = useMapStore((s) => s.filters);
   const searchQuery = useMapStore((s) => s.searchQuery);
   const center = useMapStore((s) => s.center);
+  const { savedPlaces } = useSavedPlaces();
 
   const url = buildUrl(bounds, filters, searchQuery);
   
@@ -69,9 +73,10 @@ export function usePlaces() {
       }))
       .filter((p) => {
         if (filters.maxDistance > 0 && (p.distance ?? 0) > filters.maxDistance) return false;
+        if (filters.onlySaved && !savedPlaces.some(s => s.placeId === p.id)) return false;
         return true;
       });
-  }, [data, center, filters.maxDistance]);
+  }, [data, center, filters.maxDistance, filters.onlySaved, savedPlaces]);
 
   return { places, error, isLoading };
 }

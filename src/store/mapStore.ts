@@ -54,6 +54,9 @@ const DEFAULT_FILTERS: Filters = {
   minRating: 0,
   maxDistance: 0,
   isOpenNow: false,
+  amenities: [],
+  dietaryTags: [],
+  onlySaved: false,
 };
 
 // Default center: Kupang, Indonesia (Changed for testing)

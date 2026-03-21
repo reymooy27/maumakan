@@ -4,6 +4,7 @@ import { Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import { Place } from '@/types';
 import { useMapStore } from '@/store/mapStore';
+import { useSavedPlaces } from '@/hooks/useSavedPlaces';
 
 // Colour per place type
 const TYPE_COLORS: Record<string, string> = {
@@ -12,24 +13,43 @@ const TYPE_COLORS: Record<string, string> = {
   food_stall: '#34d399',
 };
 
-function createIcon(color: string, isHovered: boolean = false) {
+function createIcon(color: string, isHovered: boolean = false, isSaved: boolean = false) {
   const hoverStyles = isHovered 
     ? 'box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(0,0,0,0.4); transform: rotate(-45deg) scale(1.2); z-index: 1000;' 
     : 'box-shadow: 0 4px 12px rgba(0,0,0,0.4); transform: rotate(-45deg) scale(1);';
 
+  const heartBadge = isSaved ? `
+    <div style="
+      position: absolute;
+      top: -8px; right: -8px;
+      background: white;
+      border-radius: 50%;
+      width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+      z-index: 2000;
+      color: #ef4444;
+      font-size: 12px;
+      line-height: 1;
+    ">♥</div>
+  ` : '';
+
   return L.divIcon({
     className: '',
     html: `
-      <div style="
-        width: 36px; height: 36px;
-        background: ${color};
-        border: 3px solid white;
-        border-radius: 50% 50% 50% 0;
-        transition: all 0.2s ease-out;
-        ${hoverStyles}
-        display:flex; align-items:center; justify-content:center;
-      ">
-        <div style="transform:rotate(45deg); color:white; font-size:14px;">🍽</div>
+      <div style="position: relative; width: 36px; height: 36px;">
+        <div style="
+          width: 100%; height: 100%;
+          background: ${color};
+          border: 3px solid white;
+          border-radius: 50% 50% 50% 0;
+          transition: all 0.2s ease-out;
+          ${hoverStyles}
+          display:flex; align-items:center; justify-content:center;
+        ">
+          <div style="transform:rotate(45deg); color:white; font-size:14px;">🍽</div>
+        </div>
+        ${heartBadge}
       </div>
     `,
     iconSize: [36, 36],
@@ -42,8 +62,10 @@ interface Props { place: Place; }
 
 export default function PlaceMarker({ place }: Props) {
   const { setSelectedPlace, hoveredPlaceId } = useMapStore();
+  const { isSaved } = useSavedPlaces();
   const color = TYPE_COLORS[place.type] ?? '#f97316';
   const isHovered = hoveredPlaceId === place.id;
+  const saved = isSaved(place.id);
 
   // Calculate if open now
   const now = new Date();
@@ -60,7 +82,7 @@ export default function PlaceMarker({ place }: Props) {
   return (
     <Marker
       position={[place.lat, place.lng]}
-      icon={createIcon(color, isHovered)}
+      icon={createIcon(color, isHovered, saved)}
       opacity={isOpen ? 1 : 0.4}
       zIndexOffset={isHovered ? 1000 : 0}
       eventHandlers={{ click: () => setSelectedPlace(place) }}
