@@ -10,12 +10,21 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior-y: none;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar       { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: #111827; }
 ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
 
-/* Leaflet overrides — isolate creates a stacking context so internal panes (z-400~700) stay inside */
+/* Leaflet overrides - isolate creates a stacking context so internal panes (z-400~700) stay inside */
 .leaflet-container { background: #1f2937 !important; isolation: isolate; }
 .leaflet-tile-pane img { filter: brightness(0.85) saturate(1.15); }

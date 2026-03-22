@@ -21,7 +21,7 @@ const MapView = dynamic(() => import('@/components/map/MapView'), {
 
 export default function HomePage() {
   return (
-    <main className="relative w-screen h-screen overflow-hidden">
+    <main className="fixed inset-0 w-full h-[100dvh] overflow-hidden overscroll-none">
       {/* Map sits at the very bottom of the stacking order */}
       <div className="absolute inset-0 z-0">
         <MapView />
