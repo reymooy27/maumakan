@@ -19,7 +19,7 @@ const TYPE_LABEL: Record<string, string> = {
 /* ── snap-point heights (vh) ─────────────────────────────── */
 const SNAP_PEEK = 25;   // collapsed / peek  (% of viewport)
 const SNAP_FULL = 50;   // default expanded (% of viewport)
-const SNAP_MAX = 100;   // fully expanded     (% of viewport)
+const SNAP_MAX = 85;   // fully expanded     (% of viewport) - Fixed so user can still see top
 const DISMISS_THRESHOLD = 20; // below this vh → close
 
 export default function PlaceSidebar() {
