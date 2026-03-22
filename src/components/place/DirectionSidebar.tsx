@@ -40,7 +40,12 @@ export default function DirectionSidebar() {
     let active = true;
 
     async function fetchRoute() {
-      if (!directionSidebarOpen || !userLocation || !selectedPlace) return;
+      if (!directionSidebarOpen || !selectedPlace) return;
+
+      if (!userLocation) {
+        setRouteError('Menunggu lokasi GPS Anda...');
+        return;
+      }
 
       setIsLoading(true);
       setRouteError(null);
@@ -230,7 +235,17 @@ function SidebarContent({
   isMobile: boolean;
 }) {
 
-  function formatDuration(seconds: number) {
+  function formatDuration(seconds: number, mode: string, meters: number) {
+    // OSRM public server ignores 'foot' and 'bike' and returns driving time.
+    // So we manually calculate reasonable estimates based on distance.
+    if (mode === 'foot') {
+      // average walking speed: 5 km/h = 1.38 m/s
+      seconds = meters / 1.38;
+    } else if (mode === 'bike') {
+      // average cycling speed: 15 km/h = 4.16 m/s
+      seconds = meters / 4.16;
+    }
+
     const min = Math.round(seconds / 60);
     if (min < 60) return `${min} min`;
     const hr = Math.floor(min / 60);
@@ -314,7 +329,7 @@ function SidebarContent({
                <div className="flex justify-between items-start mb-4">
                  <div>
                    <h3 className="text-3xl font-bold text-green-400 tracking-tight">
-                     {formatDuration(routeData.duration)}
+                     {formatDuration(routeData.duration, transportMode, routeData.distance)}
                    </h3>
                    <p className="text-gray-400 text-sm mt-1 flex items-center gap-1.5">
                      <Navigation2 className="w-3 h-3 text-orange-500" />
