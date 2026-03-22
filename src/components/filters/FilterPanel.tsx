@@ -3,7 +3,6 @@
 import { SlidersHorizontal, X, RotateCcw } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
 
-const PRICE_LABELS = ['$', '$$', '$$$', '$$$$'];
 const AMENITIES_LIST = ['WiFi', 'Parking', 'AC', 'Toilet', 'Mushola'];
 const DIETARY_LIST = ['Halal', 'Vegan', 'Vegetarian', 'Gluten-Free'];
 

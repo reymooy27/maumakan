@@ -1,15 +1,13 @@
 'use client';
 
 import { useMapStore } from '@/store/mapStore';
-import { DollarSign, MapPin, Navigation, Star, X, Heart, Users, Activity, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DollarSign, MapPin, Navigation, Star, X, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
 import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import MenuList from './MenuList';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
-import { useSession } from 'next-auth/react';
 
-const PRICE_LABEL: Record<number, string> = { 1: '$', 2: '$$', 3: '$$$', 4: '$$$$' };
 const TYPE_LABEL: Record<string, string> = {
   restaurant: '🍽 Restaurant',
   cafe: '☕ Cafe',
@@ -222,19 +220,9 @@ function SheetContent({ place: p }: { place: NonNullable<ReturnType<typeof useMa
 function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMapStore.getState>['selectedPlace']> }) {
   const { setDirectionSidebarOpen } = useMapStore();
   const { isSaved, toggleSave } = useSavedPlaces();
-  const { data: session } = useSession();
 
   // --- Lightbox state ---
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
-
-  // --- Check-in state ---
-  const [checkInCount, setCheckInCount] = useState(0);
-  const [checkedIn, setCheckedIn] = useState(false);
-  const [checkInLoading, setCheckInLoading] = useState(false);
-
-  // --- Crowd state ---
-  const [crowdStatus, setCrowdStatus] = useState('Unknown');
-  const [crowdLoading, setCrowdLoading] = useState(false);
 
   // --- Photo carousel state ---
   const photoScrollRef = useRef<HTMLDivElement>(null);
@@ -246,44 +234,6 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
     'https://images.unsplash.com/photo-1559329007-40df8a9345d8?w=400&q=80',
   ];
 
-  useEffect(() => {
-    // Fetch check-in and crowd data on mount
-    fetch(`/api/places/${p.id}/checkin`).then(r => r.json()).then(data => {
-      setCheckInCount(data.count ?? 0);
-    }).catch(() => {});
-
-    fetch(`/api/places/${p.id}/crowd`).then(r => r.json()).then(data => {
-      setCrowdStatus(data.status ?? 'Unknown');
-    }).catch(() => {});
-  }, [p.id]);
-
-  const handleCheckIn = async () => {
-    setCheckInLoading(true);
-    try {
-      const res = await fetch(`/api/places/${p.id}/checkin`, { method: 'POST' });
-      if (res.ok) {
-        setCheckedIn(true);
-        setCheckInCount(c => c + 1);
-      }
-    } catch {}
-    setCheckInLoading(false);
-  };
-
-  const handleCrowdVote = async (status: string) => {
-    setCrowdLoading(true);
-    try {
-      const res = await fetch(`/api/places/${p.id}/crowd`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) {
-        setCrowdStatus(status);
-      }
-    } catch {}
-    setCrowdLoading(false);
-  };
-
   const handleGetDirections = () => {
     setDirectionSidebarOpen(true);
   };
@@ -292,13 +242,6 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
 
   const scrollPhotos = (dir: 'left' | 'right') => {
     photoScrollRef.current?.scrollBy({ left: dir === 'left' ? -200 : 200, behavior: 'smooth' });
-  };
-
-  const crowdColors: Record<string, string> = {
-    Busy: 'text-red-400 bg-red-500/10 border-red-500/30',
-    Normal: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
-    Quiet: 'text-green-400 bg-green-500/10 border-green-500/30',
-    Unknown: 'text-gray-400 bg-gray-500/10 border-gray-500/30',
   };
 
   return (
@@ -397,67 +340,6 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
         </button>
       </div>
 
-      {/* ── Social Section: Check-In + Crowd (Only visible if the place is currently open) ── */}
-      {(() => {
-        const openMin = p.openTime ?? 480;
-        const closeMin = p.closeTime ?? 1320;
-        const now = new Date();
-        const utcMin = now.getUTCHours() * 60 + now.getUTCMinutes();
-        const witaMin = (utcMin + 8 * 60) % 1440;
-        const isOpen = openMin <= closeMin 
-          ? (witaMin >= openMin && witaMin <= closeMin)
-          : (witaMin >= openMin || witaMin <= closeMin);
-
-        if (!isOpen) return null;
-
-        return (
-          <div className="pt-1 grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            {/* Check-In Button */}
-            <button
-              onClick={handleCheckIn}
-              disabled={checkedIn || checkInLoading}
-              className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border transition-all cursor-pointer ${
-                checkedIn 
-                  ? 'bg-blue-500/10 border-blue-500/30 text-blue-400' 
-                  : 'bg-gray-800/50 border-gray-700 text-gray-300 hover:border-blue-500/50 hover:text-blue-400'
-              }`}
-            >
-              <Users className="w-5 h-5" />
-              <span className="text-xs font-semibold">
-                {checkedIn ? "I'm Here! ✓" : "I'm Here"}
-              </span>
-              <span className="text-[10px] text-gray-500">
-                {checkInCount} {checkInCount === 1 ? 'person' : 'people'} here now
-              </span>
-            </button>
-
-            {/* Crowd Status */}
-            <div className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border ${crowdColors[crowdStatus] || crowdColors.Unknown}`}>
-              <Activity className="w-5 h-5" />
-              <span className="text-xs font-semibold">
-                {crowdStatus === 'Unknown' ? 'No reports' : crowdStatus}
-              </span>
-              <div className="flex gap-1.5 mt-1">
-                {['Quiet', 'Normal', 'Busy'].map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => handleCrowdVote(s)}
-                    disabled={crowdLoading}
-                    className={`text-[10px] px-2 py-0.5 rounded-full border font-medium transition-all cursor-pointer ${
-                      crowdStatus === s
-                        ? 'bg-white/10 border-current'
-                        : 'border-gray-600 text-gray-400 hover:border-gray-400'
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* ── Photo Gallery ── */}
       <div className="pt-2">
         <h2 className="text-sm font-bold text-gray-300 uppercase tracking-wider mb-3">
@@ -481,11 +363,11 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
                 onClick={() => setSelectedPhoto(url)}
                 className="flex-shrink-0 w-32 h-24 rounded-lg overflow-hidden bg-gray-800 snap-start relative group/photo cursor-pointer"
               >
-                <img
+                <Image
                   src={url}
                   alt={`Photo ${i + 1}`}
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover/photo:scale-110"
-                  loading="lazy"
+                  fill
+                  className="object-cover transition-transform duration-300 group-hover/photo:scale-110"
                 />
               </div>
             ))}

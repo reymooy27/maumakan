@@ -26,8 +26,6 @@ model Place {
   reviews      Review[]
   savedBy      SavedPlace[]
   photos       Photo[]
-  checkIns     CheckIn[]
-  crowdReports CrowdReport[]
   amenities    String[]
   ownerId      String?      @map("owner_id")
   owner        User?        @relation("ownedPlaces", fields: [ownerId], references: [id], onDelete: SetNull)
@@ -80,8 +78,6 @@ model User {
   savedPlaces   SavedPlace[]
   reviews       Review[]
   photos        Photo[]
-  checkIns      CheckIn[]
-  crowdReports  CrowdReport[]
   ownedPlaces   Place[]      @relation("ownedPlaces")
 
   @@map("users")
@@ -168,29 +164,4 @@ model Photo {
   review    Review?    @relation(fields: [reviewId], references: [id], onDelete: Cascade)
 
   @@map("photos")
-}
-
-model CheckIn {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  placeId   String   @map("place_id")
-  createdAt DateTime @default(now())
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
-
-  @@map("check_ins")
-}
-
-model CrowdReport {
-  id        String   @id @default(uuid())
-  userId    String   @map("user_id")
-  placeId   String   @map("place_id")
-  status    String   // e.g "Busy", "Quiet", "Normal"
-  createdAt DateTime @default(now())
-
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  place Place @relation(fields: [placeId], references: [id], onDelete: Cascade)
-
-  @@map("crowd_reports")
 }

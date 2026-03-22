@@ -1,8 +1,9 @@
 'use client';
 
 import { useMapStore } from '@/store/mapStore';
-import { ArrowRight, Bike, Car, Footprints, MapPin, Navigation2, X } from 'lucide-react';
+import { Bike, Car, Footprints, MapPin, Navigation2, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Place } from '@/types';
 
 /* ── snap-point heights (vh) ── */
 const SNAP_PEEK = 25;
@@ -70,7 +71,7 @@ export default function DirectionSidebar() {
           setRouteData(null);
           setRouteError('Rute tidak ditemukan untuk mode ini.');
         }
-      } catch (err) {
+      } catch {
         if (!active) return;
         setRouteGeometry(null);
         setRouteData(null);
@@ -225,7 +226,7 @@ function SidebarContent({
   routeError,
   isMobile
 }: {
-  selectedPlace: any;
+  selectedPlace: Place;
   onClose: () => void;
   transportMode: string;
   setTransportMode: (mode: 'driving' | 'foot' | 'bike') => void;

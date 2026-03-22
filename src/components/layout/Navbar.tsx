@@ -7,6 +7,8 @@ import { LogIn, LogOut, MapPin, Compass, Sparkles, User as UserIcon, Heart } fro
 import { useMapStore } from '@/store/mapStore';
 import Link from 'next/link';
 import { useState } from 'react';
+import { Session } from 'next-auth';
+import Image from 'next/image';
 
 export default function Navbar() {
   const { data: session } = useSession();
@@ -105,7 +107,7 @@ export default function Navbar() {
   );
 }
 
-function UserProfile({ session }: { session: any }) {
+function UserProfile({ session }: { session: Session | null }) {
   const [isOpen, setIsOpen] = useState(false);
   const user = session?.user;
   const { setFilters, filters } = useMapStore();
@@ -138,7 +140,13 @@ function UserProfile({ session }: { session: any }) {
         "
       >
         {user.image ? (
-          <img src={user.image} alt={user.name || 'User'} className="w-8 h-8 rounded-full object-cover" />
+          <Image 
+            src={user.image} 
+            alt={user.name || 'User'} 
+            width={32} 
+            height={32} 
+            className="w-8 h-8 rounded-full object-cover" 
+          />
         ) : (
           <div className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center">
             <UserIcon className="w-4 h-4 text-gray-400" />

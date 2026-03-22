@@ -84,7 +84,7 @@ export default function SearchSidebar() {
           setSearchResults([]);
           setError(data.error || 'Failed to fetch results');
         }
-      } catch (err) {
+      } catch {
         if (!active) return;
         setSearchResults([]);
         setError('Network error');
@@ -317,7 +317,7 @@ function SidebarContent({
         </div>
 
         <p className="text-xs text-gray-400">
-          Top results for <span className="text-white font-medium">"{query}"</span>
+          Top results for <span className="text-white font-medium">&quot;{query}&quot;</span>
         </p>
       </div>
 
@@ -341,7 +341,7 @@ function SidebarContent({
         ) : results.length === 0 ? (
           <div className="text-center p-8 text-gray-500 flex flex-col items-center">
             <Search className="w-12 h-12 mb-3 text-gray-700" />
-            <p>No results found for "{query}"</p>
+            <p>No results found for &quot;{query}&quot;</p>
           </div>
         ) : (
           results.map((place) => (

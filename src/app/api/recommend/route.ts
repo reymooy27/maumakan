@@ -21,14 +21,14 @@ export async function GET() {
 
   try {
     // 1. Get saved places with their details
-    const savedPlaces = await (prisma as any).savedPlace.findMany({
+    const savedPlaces = await prisma.savedPlace.findMany({
       where: { userId: session.user.id },
       include: { place: true },
     });
 
     if (!savedPlaces || savedPlaces.length === 0) {
       // If no saved places, return random popular places
-      const popular = await (prisma as any).place.findMany({
+      const popular = await prisma.place.findMany({
         orderBy: { rating: 'desc' },
         take: 5,
         include: { menuItems: true },
@@ -36,7 +36,7 @@ export async function GET() {
       return NextResponse.json(popular);
     }
 
-    const savedIds = new Set(savedPlaces.map((sp: any) => sp.placeId));
+    const savedIds = new Set(savedPlaces.map((sp) => sp.placeId));
 
     // 2. Extract preference traits from saved places
     const typeCounts: Record<string, number> = {};
@@ -63,14 +63,14 @@ export async function GET() {
     const preferredType = Object.entries(typeCounts).sort((a, b) => b[1] - a[1])[0][0];
 
     // 3. Get all candidate places (excluding already saved)
-    const allPlaces = await (prisma as any).place.findMany({
+    const allPlaces = await prisma.place.findMany({
       include: { menuItems: true },
     });
 
     // 4. Score each candidate
     const scored = allPlaces
-      .filter((p: any) => !savedIds.has(p.id))
-      .map((p: any) => {
+      .filter((p) => !savedIds.has(p.id))
+      .map((p) => {
         let score = 0;
 
         // Type match
@@ -109,8 +109,12 @@ export async function GET() {
       });
 
     // 5. Sort by score descending and return top 5
-    scored.sort((a: any, b: any) => b._score - a._score);
-    const top5 = scored.slice(0, 5).map(({ _score, ...rest }: any) => rest);
+    scored.sort((a, b) => b._score - a._score);
+    const top5 = scored.slice(0, 5).map((p) => {
+      const res = { ...p };
+      delete (res as { _score?: number })._score;
+      return res;
+    });
 
     return NextResponse.json(top5);
   } catch (err) {

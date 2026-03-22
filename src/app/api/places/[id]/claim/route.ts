@@ -17,7 +17,7 @@ export async function POST(
 
   try {
     // Check if place exists and is unclaimed
-    const place = await (prisma as any).place.findUnique({
+    const place = await prisma.place.findUnique({
       where: { id: placeId },
       select: { id: true, ownerId: true, name: true },
     });
@@ -34,7 +34,7 @@ export async function POST(
     }
 
     // Claim the place
-    const updated = await (prisma as any).place.update({
+    const updated = await prisma.place.update({
       where: { id: placeId },
       data: { ownerId: session.user.id },
     });

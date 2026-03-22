@@ -20,8 +20,6 @@ export interface Place {
   distance?: number; // km, computed client-side
   amenities?: string[];
   photos?: Photo[];
-  checkIns?: CheckIn[];
-  crowdReports?: CrowdReport[];
 }
 
 export interface MenuItem {
@@ -54,21 +52,6 @@ export interface Photo {
   placeId?: string;
   menuItemId?: string;
   reviewId?: string;
-}
-
-export interface CheckIn {
-  id: string;
-  userId: string;
-  placeId: string;
-  createdAt: string;
-}
-
-export interface CrowdReport {
-  id: string;
-  userId: string;
-  placeId: string;
-  status: string; // "Busy" | "Quiet" | "Normal"
-  createdAt: string;
 }
 
 export interface Filters {
