@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 /* ── snap-point heights (vh) ── */
 const SNAP_PEEK = 25;
 const SNAP_FULL = 50;  // Default open at 50%
-const SNAP_MAX = 100;  // Can expand to 100%
+const SNAP_MAX = 85;  // Can expand to 85% to see top map
 const DISMISS_THRESHOLD = 20;
 
 export default function DirectionSidebar() {
