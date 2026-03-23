@@ -21,7 +21,10 @@ export default function DirectionSidebar() {
     userLocation,
     setRouteGeometry,
     routeData,
-    setRouteData
+    setRouteData,
+    isRouting,
+    setIsRouting,
+    setUserLocation
   } = useMapStore();
 
   /* ── bottom-sheet state (mobile) ── */
@@ -137,6 +140,33 @@ export default function DirectionSidebar() {
     }
   }, [sheetHeight, close]);
 
+  /* ── watch position for active routing ── */
+  useEffect(() => {
+    if (!isRouting) return;
+
+    if (!navigator.geolocation) {
+      alert('Geolocation tidak didukung oleh browser Anda.');
+      setIsRouting(false);
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+      },
+      (err) => {
+        console.error('Error watching position:', err);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 0
+      }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, [isRouting, setUserLocation, setIsRouting]);
+
   if (!directionSidebarOpen || !selectedPlace) return null;
 
   return (
@@ -160,6 +190,8 @@ export default function DirectionSidebar() {
           routeData={routeData}
           routeError={routeError}
           isMobile={false}
+          isRouting={isRouting}
+          setIsRouting={setIsRouting}
         />
       </aside>
 
@@ -209,6 +241,8 @@ export default function DirectionSidebar() {
             routeData={routeData}
             routeError={routeError}
             isMobile={true}
+            isRouting={isRouting}
+            setIsRouting={setIsRouting}
           />
         </div>
       </div>
@@ -224,7 +258,9 @@ function SidebarContent({
   isLoading,
   routeData,
   routeError,
-  isMobile
+  isMobile,
+  isRouting,
+  setIsRouting
 }: {
   selectedPlace: Place;
   onClose: () => void;
@@ -234,6 +270,8 @@ function SidebarContent({
   routeData: { distance: number; duration: number } | null;
   routeError: string | null;
   isMobile: boolean;
+  isRouting: boolean;
+  setIsRouting: (routing: boolean) => void;
 }) {
 
   function formatDuration(seconds: number, mode: string, meters: number) {
@@ -257,6 +295,12 @@ function SidebarContent({
   function formatDistance(meters: number) {
     if (meters < 1000) return `${Math.round(meters)} m`;
     return `${(meters / 1000).toFixed(1)} km`;
+  }
+
+  function getETA(seconds: number) {
+    const now = new Date();
+    const eta = new Date(now.getTime() + seconds * 1000);
+    return eta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   return (
@@ -326,26 +370,61 @@ function SidebarContent({
                {routeError}
              </div>
           ) : routeData ? (
-             <div className="bg-gray-800 border-l-4 border-orange-500 p-5 rounded-xl rounded-l-md shadow-lg border border-gray-700/50">
-               <div className="flex justify-between items-start mb-4">
-                 <div>
-                   <h3 className="text-3xl font-bold text-green-400 tracking-tight">
-                     {formatDuration(routeData.duration, transportMode, routeData.distance)}
-                   </h3>
-                   <p className="text-gray-400 text-sm mt-1 flex items-center gap-1.5">
-                     <Navigation2 className="w-3 h-3 text-orange-500" />
-                     {formatDistance(routeData.distance)}
-                   </p>
+             <div className="space-y-4">
+               <div className="bg-gray-800 border-l-4 border-orange-500 p-5 rounded-xl rounded-l-md shadow-lg border border-gray-700/50">
+                 <div className="flex justify-between items-start mb-4">
+                   <div>
+                     <h3 className="text-3xl font-bold text-green-400 tracking-tight">
+                       {formatDuration(routeData.duration, transportMode, routeData.distance)}
+                     </h3>
+                     <p className="text-gray-400 text-sm mt-1 flex items-center gap-1.5">
+                       <Navigation2 className="w-3 h-3 text-orange-500" />
+                       {formatDistance(routeData.distance)}
+                     </p>
+                   </div>
+                   <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
+                     {transportMode === 'driving' ? <Car className="w-5 h-5" /> : transportMode === 'bike' ? <Bike className="w-5 h-5" /> : <Footprints className="w-5 h-5" />}
+                   </div>
                  </div>
-                 <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
-                   {transportMode === 'driving' ? <Car className="w-5 h-5" /> : transportMode === 'bike' ? <Bike className="w-5 h-5" /> : <Footprints className="w-5 h-5" />}
-                 </div>
+
+                 {!isRouting ? (
+                   <button 
+                     onClick={() => setIsRouting(true)}
+                     className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.98] cursor-pointer"
+                   >
+                     <Navigation2 className="w-4 h-4 fill-current" />
+                     Start Rute
+                   </button>
+                 ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-400">ETA (Estimasi Kedatangan)</span>
+                        <span className="text-white font-bold">{getETA(routeData.duration)}</span>
+                      </div>
+                      <div className="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-orange-500 h-full w-1/3 animate-pulse" />
+                      </div>
+                      <button 
+                        onClick={() => setIsRouting(false)}
+                        className="w-full flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-3 rounded-xl font-bold text-sm transition-all cursor-pointer border border-red-500/30"
+                      >
+                        Hentikan Rute
+                      </button>
+                    </div>
+                 )}
                </div>
 
-               <button className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.98] cursor-pointer">
-                 <Navigation2 className="w-4 h-4 fill-current" />
-                 Start Rute
-               </button>
+               {isRouting && (
+                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white flex-shrink-0 shadow-lg shadow-blue-500/20">
+                      <Navigation2 className="w-5 h-5 fill-current animate-bounce" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-blue-300 font-medium">Navigasi Aktif</p>
+                      <p className="text-sm text-white font-bold leading-tight">Sedang menuju ke {selectedPlace.name}</p>
+                    </div>
+                 </div>
+               )}
              </div>
           ) : (
              <div className="text-gray-500 text-sm text-center py-10 opacity-60 italic">

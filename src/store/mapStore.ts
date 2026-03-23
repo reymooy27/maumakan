@@ -46,6 +46,10 @@ interface MapStore {
   setTransportMode: (mode: 'driving' | 'foot' | 'bike') => void;
   routeData: { distance: number; duration: number } | null;
   setRouteData: (data: { distance: number; duration: number } | null) => void;
+
+  // Is Currently Routing
+  isRouting: boolean;
+  setIsRouting: (isRouting: boolean) => void;
 }
 
 const DEFAULT_FILTERS: Filters = {
@@ -134,10 +138,13 @@ export const useMapStore = create<MapStore>((set) => ({
   setDirectionSidebarOpen: (open) => 
     set({ 
       directionSidebarOpen: open, 
-      ...(open ? { filterPanelOpen: false, searchSidebarOpen: false } : { routeGeometry: null, routeData: null }) 
+      ...(open ? { filterPanelOpen: false, searchSidebarOpen: false } : { routeGeometry: null, routeData: null, isRouting: false }) 
     }),
   transportMode: 'driving',
   setTransportMode: (mode) => set({ transportMode: mode }),
   routeData: null,
   setRouteData: (data) => set({ routeData: data }),
+
+  isRouting: false,
+  setIsRouting: (isRouting) => set({ isRouting }),
 }));
