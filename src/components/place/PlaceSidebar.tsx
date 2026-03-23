@@ -7,6 +7,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import MenuList from './MenuList';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useAuthStore } from '@/store/authStore';
 
 const TYPE_LABEL: Record<string, string> = {
   restaurant: '🍽 Restaurant',
@@ -220,6 +223,11 @@ function SheetContent({ place: p }: { place: NonNullable<ReturnType<typeof useMa
 function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMapStore.getState>['selectedPlace']> }) {
   const { setDirectionSidebarOpen } = useMapStore();
   const { isSaved, toggleSave } = useSavedPlaces();
+  const router = useRouter();
+  const { data: nextAuthSession } = useSession();
+  const { user: supabaseUser } = useAuthStore();
+
+  const isAuthenticated = !!nextAuthSession?.user || !!supabaseUser;
 
   // --- Lightbox state ---
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
@@ -236,6 +244,14 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
 
   const handleGetDirections = () => {
     setDirectionSidebarOpen(true);
+  };
+
+  const handleToggleSave = () => {
+    if (!isAuthenticated) {
+      router.push('/auth/login');
+      return;
+    }
+    toggleSave(p.id);
   };
 
   const saved = isSaved(p.id);
@@ -327,7 +343,7 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
           Rute
         </button>
         <button
-          onClick={() => toggleSave(p.id)}
+          onClick={handleToggleSave}
           className={`flex items-center justify-center p-3.5 rounded-xl transition-all cursor-pointer border ${
             saved 
               ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20 shadow-inner' 
