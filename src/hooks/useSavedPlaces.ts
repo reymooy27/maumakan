@@ -1,5 +1,6 @@
 import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
+import { useAuthStore } from '@/store/authStore';
 import { Place } from '@/types';
 
 export interface SavedPlace {
@@ -13,24 +14,27 @@ export interface SavedPlace {
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export function useSavedPlaces() {
-  const { data: session } = useSession();
+  const { data: nextAuthSession } = useSession();
+  const { user: supabaseUser } = useAuthStore();
+  
+  const isAuthenticated = !!nextAuthSession?.user || !!supabaseUser;
   
   const { data, error, mutate } = useSWR<SavedPlace[]>(
-    session?.user ? '/api/user/saved-places' : null,
+    isAuthenticated ? '/api/user/saved-places' : null,
     fetcher
   );
 
   const toggleSave = async (placeId: string) => {
-    if (!session?.user) {
+    if (!isAuthenticated) {
       // Must be logged in to save
       return false;
     }
 
     // Optimistic update
     const previous = data;
-    const isSaved = data?.some(s => s.placeId === placeId);
+    const isSavedAlready = data?.some(s => s.placeId === placeId);
     
-    if (isSaved) {
+    if (isSavedAlready) {
       mutate(data!.filter(s => s.placeId !== placeId), false);
     } else {
       // Mock the saved place locally until refresh
@@ -58,7 +62,7 @@ export function useSavedPlaces() {
 
   return {
     savedPlaces: data || [],
-    isLoading: !error && !data && !!session?.user,
+    isLoading: !error && !data && isAuthenticated,
     isError: error,
     toggleSave,
     isSaved

@@ -328,15 +328,14 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
         </button>
         <button
           onClick={() => toggleSave(p.id)}
-          className={`flex items-center justify-center gap-2 font-semibold py-3 px-5 rounded-xl transition-all cursor-pointer border ${
+          className={`flex items-center justify-center p-3.5 rounded-xl transition-all cursor-pointer border ${
             saved 
               ? 'bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/20 shadow-inner' 
               : 'bg-gray-800 text-gray-300 border-gray-700 hover:bg-gray-700 hover:text-white shadow-lg'
           }`}
           title={saved ? "Hapus dari Tersimpan" : "Simpan Tempat"}
         >
-          <Heart className={`w-5 h-5 ${saved ? 'fill-current text-red-500' : ''}`} />
-          {saved ? 'Tersimpan' : 'Simpan'}
+          <Heart className={`w-5 h-5 ${saved ? 'fill-current' : ''}`} />
         </button>
       </div>
 
