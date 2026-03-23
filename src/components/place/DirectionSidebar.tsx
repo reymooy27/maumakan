@@ -51,7 +51,10 @@ export default function DirectionSidebar() {
         return;
       }
 
-      setIsLoading(true);
+      // Only show loading pulse if we don't have route data yet
+      if (!routeData) {
+        setIsLoading(true);
+      }
       setRouteError(null);
 
       try {
