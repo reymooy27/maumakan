@@ -6,8 +6,6 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 
-import { signIn } from 'next-auth/react';
-
 type Mode = 'login' | 'signup';
 
 export default function LoginPage() {
@@ -139,7 +137,20 @@ export default function LoginPage() {
 
             <button
               type="button"
-              onClick={() => signIn('google', { callbackUrl: '/' })}
+              onClick={async () => {
+                setLoading(true);
+                const supabase = createClient();
+                const { error } = await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: {
+                    redirectTo: `${window.location.origin}/`,
+                  },
+                });
+                if (error) {
+                  setMessage({ type: 'error', text: error.message });
+                  setLoading(false);
+                }
+              }}
               className="w-full flex items-center justify-center gap-2 py-3 bg-gray-800 hover:bg-gray-700 rounded-xl text-white font-semibold text-sm transition-all duration-200 border border-gray-700"
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
