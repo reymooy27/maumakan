@@ -5,14 +5,24 @@ import SearchBar from '@/components/search/SearchBar';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import { LogIn, LogOut, MapPin, Compass, Sparkles, User as UserIcon, Heart } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
+import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useState } from 'react';
 import { Session } from 'next-auth';
 import Image from 'next/image';
+import { createClient } from '@/lib/supabase/client';
 
 export default function Navbar() {
-  const { data: session } = useSession();
-  const user = session?.user;
+  const { data: nextAuthSession } = useSession();
+  const { user: supabaseUser } = useAuthStore();
+  
+  // Normalize user object between providers
+  const user = supabaseUser ? {
+    name: supabaseUser.user_metadata?.full_name ?? supabaseUser.email?.split('@')[0],
+    email: supabaseUser.email,
+    image: supabaseUser.user_metadata?.avatar_url ?? null,
+  } : nextAuthSession?.user;
+
   const { setCenter, setZoom, setFilters, setUserLocation, setSelectedPlace } = useMapStore();
   const [discovering, setDiscovering] = useState(false);
 
@@ -101,21 +111,29 @@ export default function Navbar() {
 
         <FilterPanel />
 
-        <UserProfile session={session} />
+        <UserProfile user={user} />
       </div>
     </header>
   );
 }
 
-function UserProfile({ session }: { session: Session | null }) {
+function UserProfile({ user }: { user: any }) {
   const [isOpen, setIsOpen] = useState(false);
-  const user = session?.user;
   const { setFilters, filters } = useMapStore();
+  const { signOut: supabaseSignOut } = useAuthStore();
+
+  const handleSignOut = async () => {
+    // Sign out from both providers
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    supabaseSignOut();
+    signOut(); // next-auth signout
+  };
 
   if (!user) {
     return (
-      <button
-        onClick={() => signIn()}
+      <Link
+        href="/auth/login"
         className="
           flex items-center gap-1.5 px-3 py-2
           bg-orange-500 hover:bg-orange-600
@@ -125,7 +143,7 @@ function UserProfile({ session }: { session: Session | null }) {
       >
         <LogIn className="w-4 h-4" />
         <span className="hidden sm:block">Sign in</span>
-      </button>
+      </Link>
     );
   }
 
@@ -191,7 +209,7 @@ function UserProfile({ session }: { session: Session | null }) {
             {/* Logout */}
             <div className="pt-2 border-t border-gray-800/50">
               <button
-                onClick={() => signOut()}
+                onClick={handleSignOut}
                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium text-gray-400 hover:text-red-400 hover:bg-red-400/10 transition-colors cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
