@@ -129,9 +129,14 @@ export default function DirectionSidebar() {
     if (!dragging.current) return;
     const deltaY = startY.current - e.clientY;
     const deltaVh = (deltaY / window.innerHeight) * 100;
-    const newHeight = Math.max(5, Math.min(SNAP_MAX, startHeight.current + deltaVh));
+    let newHeight = startHeight.current + deltaVh;
+    
+    // If routing, restrict the max height to SNAP_MIN or slightly above to prevent "opening"
+    const maxAllowed = isRouting ? SNAP_MIN + 5 : SNAP_MAX;
+    newHeight = Math.max(5, Math.min(maxAllowed, newHeight));
+    
     setSheetHeight(newHeight);
-  }, []);
+  }, [isRouting]);
 
   const onPointerUp = useCallback(() => {
     if (!dragging.current) return;
@@ -144,6 +149,9 @@ export default function DirectionSidebar() {
       } else {
         close();
       }
+    } else if (isRouting) {
+      // Always snap back to MIN when routing
+      setSheetHeight(SNAP_MIN);
     } else if (sheetHeight < (SNAP_MIN + SNAP_PEEK) / 2) {
       setSheetHeight(SNAP_MIN);
     } else if (sheetHeight < (SNAP_PEEK + SNAP_FULL) / 2) {

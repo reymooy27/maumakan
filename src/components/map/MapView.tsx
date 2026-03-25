@@ -160,19 +160,23 @@ function LocateControl({ position }: { position: [number, number] | null }) {
 // Auto fit bounds to route when a route is drawn or routing starts
 function RouteFitter({ geometry, isRouting }: { geometry: [number, number][] | null, isRouting: boolean }) {
   const map = useMap();
+  const prevIsRouting = useRef(false);
   
   useEffect(() => {
     if (geometry && geometry.length > 0) {
       const bounds = L.latLngBounds(geometry);
       
       if (isRouting) {
-        // When routing starts, focus on the center of the direction line
-        map.flyTo(bounds.getCenter(), Math.max(map.getZoom(), 15), { animate: true, duration: 1.5 });
+        // When routing starts, focus on the center of the direction line only once
+        if (!prevIsRouting.current) {
+          map.flyTo(bounds.getCenter(), Math.max(map.getZoom(), 15), { animate: true, duration: 1.5 });
+        }
       } else {
         // Normal fit bounds when route is just previewed
         map.fitBounds(bounds, { padding: [50, 50] });
       }
     }
+    prevIsRouting.current = isRouting;
   }, [geometry, map, isRouting]);
   
   return null;
