@@ -91,7 +91,8 @@ export default function DirectionSidebar() {
     fetchRoute();
 
     return () => { active = false; };
-  }, [directionSidebarOpen, userLocation, selectedPlace, transportMode, setRouteGeometry, setRouteData, routeData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [directionSidebarOpen, userLocation, selectedPlace, transportMode, setRouteGeometry, setRouteData]);
 
   /* ── open / close animation & routing height ── */
   useEffect(() => {
@@ -166,17 +167,28 @@ export default function DirectionSidebar() {
       return;
     }
 
+    let lastLat: number | null = null;
+    let lastLng: number | null = null;
+    const MOVE_THRESHOLD = 0.00005; // Approx 5 meters
+
     const watchId = navigator.geolocation.watchPosition(
       (pos) => {
-        setUserLocation([pos.coords.latitude, pos.coords.longitude]);
+        const { latitude, longitude } = pos.coords;
+        
+        // Only update if moved meaningfully to prevent jitter
+        if (lastLat === null || Math.abs(latitude - lastLat) > MOVE_THRESHOLD || Math.abs(longitude - lastLng!) > MOVE_THRESHOLD) {
+          setUserLocation([latitude, longitude]);
+          lastLat = latitude;
+          lastLng = longitude;
+        }
       },
       (err) => {
         console.error('Error watching position:', err);
       },
       {
         enableHighAccuracy: true,
-        timeout: 5000,
-        maximumAge: 0
+        timeout: 10000,
+        maximumAge: 5000 // Allow slightly older cached positions to reduce jitter
       }
     );
 
