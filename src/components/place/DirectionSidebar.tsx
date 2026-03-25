@@ -204,7 +204,6 @@ export default function DirectionSidebar() {
         <div className="flex-1 overflow-y-auto">
           <SidebarContent
             selectedPlace={selectedPlace}
-            onClose={close}
             transportMode={transportMode}
             setTransportMode={setTransportMode}
             isLoading={isLoading}
@@ -255,7 +254,6 @@ export default function DirectionSidebar() {
         >
           <SidebarContent
             selectedPlace={selectedPlace}
-            onClose={close}
             transportMode={transportMode}
             setTransportMode={setTransportMode}
             isLoading={isLoading}
