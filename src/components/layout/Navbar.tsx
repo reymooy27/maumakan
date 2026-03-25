@@ -2,15 +2,21 @@
 
 import FilterPanel from '@/components/filters/FilterPanel';
 import SearchBar from '@/components/search/SearchBar';
-import { signIn, signOut, useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { LogIn, LogOut, MapPin, Compass, Sparkles, User as UserIcon, Heart } from 'lucide-react';
 import { useMapStore } from '@/store/mapStore';
 import { useAuthStore } from '@/store/authStore';
 import Link from 'next/link';
 import { useState } from 'react';
-import { Session } from 'next-auth';
 import Image from 'next/image';
 import { createClient } from '@/lib/supabase/client';
+
+interface NavUser {
+  id: string;
+  email?: string | null;
+  name?: string | null;
+  image?: string | null;
+}
 
 export default function Navbar() {
   const { data: nextAuthSession } = useSession();
@@ -18,6 +24,7 @@ export default function Navbar() {
   
   // Normalize user object between providers
   const user = supabaseUser ? {
+    id: supabaseUser.id,
     name: supabaseUser.user_metadata?.full_name ?? supabaseUser.email?.split('@')[0],
     email: supabaseUser.email,
     image: supabaseUser.user_metadata?.avatar_url ?? null,
@@ -117,7 +124,7 @@ export default function Navbar() {
   );
 }
 
-function UserProfile({ user }: { user: any }) {
+function UserProfile({ user }: { user: NavUser | null | undefined }) {
   const [isOpen, setIsOpen] = useState(false);
   const { setFilters, filters } = useMapStore();
   const { signOut: supabaseSignOut } = useAuthStore();
@@ -222,4 +229,3 @@ function UserProfile({ user }: { user: any }) {
     </div>
   );
 }
-

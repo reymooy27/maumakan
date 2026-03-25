@@ -91,7 +91,7 @@ export default function DirectionSidebar() {
     fetchRoute();
 
     return () => { active = false; };
-  }, [directionSidebarOpen, userLocation, selectedPlace, transportMode, setRouteGeometry, setRouteData]);
+  }, [directionSidebarOpen, userLocation, selectedPlace, transportMode, setRouteGeometry, setRouteData, routeData]);
 
   /* ── open / close animation & routing height ── */
   useEffect(() => {
@@ -192,18 +192,29 @@ export default function DirectionSidebar() {
           ${isVisible ? 'translate-x-0' : '-translate-x-full'}
         `}
       >
-        <SidebarContent
-          selectedPlace={selectedPlace}
-          onClose={close}
-          transportMode={transportMode}
-          setTransportMode={setTransportMode}
-          isLoading={isLoading}
-          routeData={routeData}
-          routeError={routeError}
-          isMobile={false}
-          isRouting={isRouting}
-          setIsRouting={setIsRouting}
-        />
+        <div className="flex items-center justify-between p-4 bg-gray-900 border-b border-gray-800 flex-shrink-0">
+          <h2 className="text-white font-bold">Directions</h2>
+          <button
+            onClick={close}
+            className="p-1.5 bg-gray-800 hover:bg-gray-700 rounded-full text-white transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto">
+          <SidebarContent
+            selectedPlace={selectedPlace}
+            onClose={close}
+            transportMode={transportMode}
+            setTransportMode={setTransportMode}
+            isLoading={isLoading}
+            routeData={routeData}
+            routeError={routeError}
+            isMobile={false}
+            isRouting={isRouting}
+            setIsRouting={setIsRouting}
+          />
+        </div>
       </aside>
 
       {/* ── Mobile: bottom sheet ── */}
@@ -223,16 +234,15 @@ export default function DirectionSidebar() {
           transition-transform duration-300
         `}
       >
-        <div className="flex justify-center pt-3 pb-2 flex-shrink-0 cursor-grab active:cursor-grabbing">
+        <div className="flex items-center justify-center pt-3 pb-2 flex-shrink-0 cursor-grab active:cursor-grabbing relative">
           <div className="w-10 h-1 rounded-full bg-gray-600" />
+          <button
+            onClick={close}
+            className="absolute right-4 p-1.5 bg-gray-800 border border-gray-700 rounded-full text-white hover:text-orange-400 transition-all cursor-pointer shadow-lg"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
-
-        <button
-          onClick={close}
-          className="absolute top-4 right-4 z-20 p-2 bg-gray-900/80 backdrop-blur-md border border-gray-700 rounded-full text-white hover:text-orange-400 transition-all cursor-pointer shadow-xl"
-        >
-          <X className="w-5 h-5 shadow-sm" />
-        </button>
 
         <div
           ref={contentRef}
@@ -263,7 +273,6 @@ export default function DirectionSidebar() {
 
 function SidebarContent({
   selectedPlace,
-  onClose,
   transportMode,
   setTransportMode,
   isLoading,
@@ -274,7 +283,6 @@ function SidebarContent({
   setIsRouting
 }: {
   selectedPlace: Place;
-  onClose: () => void;
   transportMode: string;
   setTransportMode: (mode: 'driving' | 'foot' | 'bike') => void;
   isLoading: boolean;
@@ -319,7 +327,7 @@ function SidebarContent({
       <div className={`flex flex-col ${isMobile ? '' : 'h-full'}`}>
         {/* ── Top Estimation Area (Conditional) ── */}
         {routeData && (
-          <div className="bg-gray-800 border-b border-gray-700 px-5 py-3 flex items-center justify-between flex-shrink-0 animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="bg-gray-800 border-b border-gray-700 px-5 py-3 flex items-center gap-6 flex-shrink-0 animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-black text-green-400">
                 {formatDuration(routeData.duration, transportMode, routeData.distance)}
@@ -330,34 +338,29 @@ function SidebarContent({
               </span>
             </div>
             
-            {!isRouting ? (
-              <button 
-                onClick={() => setIsRouting(true)}
-                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-1.5 rounded-full font-bold text-xs transition-all shadow-lg active:scale-95 cursor-pointer flex items-center gap-1.5"
-              >
-                <Navigation2 className="w-3 h-3 fill-current" />
-                Start
-              </button>
-            ) : (
-              <button 
-                onClick={() => setIsRouting(false)}
-                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer border border-red-500/30"
-              >
-                Stop
-              </button>
-            )}
+            <div className="flex-1 flex justify-center pr-8 md:pr-0">
+              {!isRouting ? (
+                <button 
+                  onClick={() => setIsRouting(true)}
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-1.5 rounded-full font-bold text-xs transition-all shadow-lg active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Navigation2 className="w-3 h-3 fill-current" />
+                  Start
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setIsRouting(false)}
+                  className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-6 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer border border-red-500/30"
+                >
+                  Stop
+                </button>
+              )}
+            </div>
           </div>
         )}
 
         {/* ── Header Area ── */}
         <div className="bg-orange-600 px-5 pt-8 pb-5 flex-shrink-0 text-white shadow-md relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 z-10 p-1.5 bg-orange-700/50 rounded-full text-white hover:bg-orange-700 transition-colors cursor-pointer hidden md:flex"
-          >
-            <X className="w-4 h-4" />
-          </button>
-
           <div className="space-y-2.5">
             <div className="flex items-center gap-3">
               <div className="w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center flex-shrink-0">
@@ -436,7 +439,7 @@ function SidebarContent({
 
                {!isRouting && (
                   <div className="text-gray-500 text-xs text-center py-4 opacity-60">
-                    Klik "Start" untuk memulai navigasi real-time.
+                    Klik &quot;Start&quot; untuk memulai navigasi real-time.
                   </div>
                )}
              </div>
