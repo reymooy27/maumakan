@@ -146,7 +146,8 @@ function LocateControl({ position }: { position: [number, number] | null }) {
               map.locate();
             }
           }}
-          className="bg-white hover:bg-gray-100 text-blue-600 w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-colors"
+          disabled={!position}
+          className="bg-white hover:bg-gray-100 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-blue-600 w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-colors"
           title="Ke Lokasi Saya"
         >
           <LocateFixed size={24} strokeWidth={2.5} />

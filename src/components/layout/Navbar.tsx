@@ -30,7 +30,7 @@ export default function Navbar() {
     image: supabaseUser.user_metadata?.avatar_url ?? null,
   } : nextAuthSession?.user;
 
-  const { setCenter, setZoom, setFilters, setUserLocation, setSelectedPlace } = useMapStore();
+  const { setCenter, setZoom, setFilters, setUserLocation, setSelectedPlace, userLocation } = useMapStore();
   const [discovering, setDiscovering] = useState(false);
 
   const handleEatNearMe = () => {
@@ -99,7 +99,8 @@ export default function Navbar() {
       <div className="flex items-center gap-2 pointer-events-auto flex-shrink-0">
         <button
           onClick={handleEatNearMe}
-          className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-blue-500/90 hover:bg-blue-600 text-white text-sm font-semibold rounded-xl transition-all shadow-lg backdrop-blur-sm cursor-pointer border border-blue-400"
+          disabled={!userLocation}
+          className="hidden md:flex items-center gap-1.5 px-3 py-2 bg-blue-500/90 hover:bg-blue-600 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white text-sm font-semibold rounded-xl transition-all shadow-lg backdrop-blur-sm cursor-pointer border border-blue-400"
         >
           <Compass className="w-4 h-4" />
           Eat Near Me

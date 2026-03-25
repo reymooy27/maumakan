@@ -221,7 +221,7 @@ function SheetContent({ place: p }: { place: NonNullable<ReturnType<typeof useMa
    Shared place detail section
    ─────────────────────────────────────────────────────────── */
 function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMapStore.getState>['selectedPlace']> }) {
-  const { setDirectionSidebarOpen } = useMapStore();
+  const { setDirectionSidebarOpen, userLocation } = useMapStore();
   const { isSaved, toggleSave } = useSavedPlaces();
   const router = useRouter();
   const { data: nextAuthSession } = useSession();
@@ -337,7 +337,8 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
       <div className="pt-2 flex gap-3">
         <button
           onClick={handleGetDirections}
-          className="flex-1 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors cursor-pointer shadow-lg"
+          disabled={!userLocation}
+          className="flex-1 flex items-center justify-center gap-2 bg-orange-600 hover:bg-orange-700 disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-white font-semibold py-3 px-4 rounded-xl transition-colors cursor-pointer shadow-lg"
         >
           <Navigation className="w-5 h-5" />
           Rute
