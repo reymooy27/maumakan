@@ -3,7 +3,7 @@
 import { usePlaces } from '@/hooks/usePlaces';
 import { useMapStore } from '@/store/mapStore';
 import 'leaflet/dist/leaflet.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, useMapEvents, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import PlaceMarker from './PlaceMarker';
 import L from 'leaflet';
