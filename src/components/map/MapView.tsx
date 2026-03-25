@@ -167,9 +167,9 @@ function RouteFitter({ geometry, isRouting }: { geometry: [number, number][] | n
       const bounds = L.latLngBounds(geometry);
       
       if (isRouting) {
-        // When routing starts, focus on the center of the direction line only once
+        // When routing starts, focus on the center of the direction line only once without animation
         if (!prevIsRouting.current) {
-          map.flyTo(bounds.getCenter(), Math.max(map.getZoom(), 15), { animate: true, duration: 1.5 });
+          map.setView(bounds.getCenter(), Math.max(map.getZoom(), 15), { animate: false });
         }
       } else {
         // Normal fit bounds when route is just previewed
