@@ -6,10 +6,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Place } from '@/types';
 
 /* ── snap-point heights (vh) ── */
+const SNAP_MIN = 10;
 const SNAP_PEEK = 25;
 const SNAP_FULL = 50;  // Default open at 50%
 const SNAP_MAX = 85;  // Can expand to 85% to see top map
-const DISMISS_THRESHOLD = 20;
+const DISMISS_THRESHOLD = 8; // Lowered to allow snapping to SNAP_MIN
 
 export default function DirectionSidebar() {
   const {
@@ -92,15 +93,20 @@ export default function DirectionSidebar() {
     return () => { active = false; };
   }, [directionSidebarOpen, userLocation, selectedPlace, transportMode, setRouteGeometry, setRouteData]);
 
-  /* ── open / close animation ── */
+  /* ── open / close animation & routing height ── */
   useEffect(() => {
     if (directionSidebarOpen && selectedPlace) {
-      setSheetHeight(SNAP_FULL);
+      // If routing starts, minimize the sheet to let user see map
+      if (isRouting) {
+        setSheetHeight(SNAP_MIN);
+      } else {
+        setSheetHeight(SNAP_FULL);
+      }
       requestAnimationFrame(() => setIsVisible(true));
     } else {
       setIsVisible(false);
     }
-  }, [directionSidebarOpen, selectedPlace]);
+  }, [directionSidebarOpen, selectedPlace, isRouting]);
 
   const close = useCallback(() => {
     setIsVisible(false);
@@ -123,7 +129,7 @@ export default function DirectionSidebar() {
     if (!dragging.current) return;
     const deltaY = startY.current - e.clientY;
     const deltaVh = (deltaY / window.innerHeight) * 100;
-    const newHeight = Math.max(10, Math.min(SNAP_MAX, startHeight.current + deltaVh));
+    const newHeight = Math.max(5, Math.min(SNAP_MAX, startHeight.current + deltaVh));
     setSheetHeight(newHeight);
   }, []);
 
@@ -134,6 +140,8 @@ export default function DirectionSidebar() {
 
     if (sheetHeight < DISMISS_THRESHOLD) {
       close();
+    } else if (sheetHeight < (SNAP_MIN + SNAP_PEEK) / 2) {
+      setSheetHeight(SNAP_MIN);
     } else if (sheetHeight < (SNAP_PEEK + SNAP_FULL) / 2) {
       setSheetHeight(SNAP_PEEK);
     } else if (sheetHeight < (SNAP_FULL + SNAP_MAX) / 2) {

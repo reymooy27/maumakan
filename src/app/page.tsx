@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import dynamic from 'next/dynamic';
-import Navbar from '@/components/layout/Navbar';
-import PlaceSidebar from '@/components/place/PlaceSidebar';
-import DirectionSidebar from '@/components/place/DirectionSidebar';
-import SearchSidebar from '@/components/search/SearchSidebar';
+import dynamic from "next/dynamic";
+import Navbar from "@/components/layout/Navbar";
+import PlaceSidebar from "@/components/place/PlaceSidebar";
+import DirectionSidebar from "@/components/place/DirectionSidebar";
+import SearchSidebar from "@/components/search/SearchSidebar";
 
 // Leaflet needs to be loaded client-side only
-const MapView = dynamic(() => import('@/components/map/MapView'), {
+const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (
     <div className="w-full h-full bg-gray-900 flex items-center justify-center">

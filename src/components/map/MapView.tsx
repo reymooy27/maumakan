@@ -156,22 +156,30 @@ function LocateControl({ position }: { position: [number, number] | null }) {
   );
 }
 
-// Auto fit bounds to route when a route is drawn
-function RouteFitter({ geometry }: { geometry: [number, number][] | null }) {
+// Auto fit bounds to route when a route is drawn or routing starts
+function RouteFitter({ geometry, isRouting }: { geometry: [number, number][] | null, isRouting: boolean }) {
   const map = useMap();
   
   useEffect(() => {
     if (geometry && geometry.length > 0) {
       const bounds = L.latLngBounds(geometry);
-      map.fitBounds(bounds, { padding: [50, 50] });
+      
+      if (isRouting) {
+        // When routing starts, focus on the center of the direction line
+        map.flyTo(bounds.getCenter(), Math.max(map.getZoom(), 15), { animate: true, duration: 1.5 });
+      } else {
+        // Normal fit bounds when route is just previewed
+        map.fitBounds(bounds, { padding: [50, 50] });
+      }
     }
-  }, [geometry, map]);
+  }, [geometry, map, isRouting]);
   
   return null;
 }
 
 export default function MapView() {
   const routeGeometry = useMapStore((s) => s.routeGeometry);
+  const isRouting = useMapStore((s) => s.isRouting);
   const userLocation = useMapStore((s) => s.userLocation);
   const { places } = usePlaces();
 
@@ -211,8 +219,8 @@ export default function MapView() {
           />
         )}
         
-        {/* Auto fit map bounds when a route is drawn */}
-        <RouteFitter geometry={routeGeometry} />
+        {/* Auto fit map bounds when a route is drawn or routing starts */}
+        <RouteFitter geometry={routeGeometry} isRouting={isRouting} />
 
         {places.map((place) => (
           <PlaceMarker key={place.id} place={place} />
