@@ -317,8 +317,40 @@ function SidebarContent({
   return (
     <div className="flex flex-col h-full w-full">
       <div className={`flex flex-col ${isMobile ? '' : 'h-full'}`}>
+        {/* ── Top Estimation Area (Conditional) ── */}
+        {routeData && (
+          <div className="bg-gray-800 border-b border-gray-700 px-5 py-3 flex items-center justify-between flex-shrink-0 animate-in fade-in slide-in-from-top-4 duration-300">
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-black text-green-400">
+                {formatDuration(routeData.duration, transportMode, routeData.distance)}
+              </span>
+              <span className="text-gray-400 text-xs font-medium flex items-center gap-1">
+                <Navigation2 className="w-3 h-3 text-orange-500 fill-orange-500" />
+                {formatDistance(routeData.distance)}
+              </span>
+            </div>
+            
+            {!isRouting ? (
+              <button 
+                onClick={() => setIsRouting(true)}
+                className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-1.5 rounded-full font-bold text-xs transition-all shadow-lg active:scale-95 cursor-pointer flex items-center gap-1.5"
+              >
+                <Navigation2 className="w-3 h-3 fill-current" />
+                Start
+              </button>
+            ) : (
+              <button 
+                onClick={() => setIsRouting(false)}
+                className="bg-red-500/20 hover:bg-red-500/30 text-red-400 px-4 py-1.5 rounded-full font-bold text-xs transition-all cursor-pointer border border-red-500/30"
+              >
+                Stop
+              </button>
+            )}
+          </div>
+        )}
+
         {/* ── Header Area ── */}
-        <div className="bg-orange-600 px-5 pt-10 pb-6 flex-shrink-0 text-white shadow-md relative">
+        <div className="bg-orange-600 px-5 pt-8 pb-5 flex-shrink-0 text-white shadow-md relative">
           <button
             onClick={onClose}
             className="absolute top-4 right-4 z-10 p-1.5 bg-orange-700/50 rounded-full text-white hover:bg-orange-700 transition-colors cursor-pointer hidden md:flex"
@@ -326,44 +358,42 @@ function SidebarContent({
             <X className="w-4 h-4" />
           </button>
 
-          <h2 className="text-xl font-bold mb-4 pr-8">Directions</h2>
-
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="flex items-center gap-3">
-              <div className="w-4 h-4 rounded-full border-2 border-white flex items-center justify-center flex-shrink-0">
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-white flex items-center justify-center flex-shrink-0">
                 <div className="w-1.5 h-1.5 bg-white rounded-full" />
               </div>
-              <div className="flex-1 bg-orange-700/50 rounded-lg px-3 py-2 text-sm text-orange-100 placeholder-orange-300 outline-none border border-transparent focus:border-white/30 transition-colors pointer-events-none">
-                Lokasi Anda (Your Location)
+              <div className="flex-1 bg-orange-700/40 rounded-lg px-3 py-1.5 text-xs text-orange-100 truncate">
+                Lokasi Anda
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <MapPin className="w-4 h-4 text-orange-300 flex-shrink-0" fill="currentColor" />
-              <div className="flex-1 bg-orange-700/50 rounded-lg px-3 py-2 text-sm text-white font-medium outline-none border border-transparent focus:border-white/30 transition-colors truncate">
+              <MapPin className="w-3.5 h-3.5 text-orange-300 flex-shrink-0" fill="currentColor" />
+              <div className="flex-1 bg-orange-700/40 rounded-lg px-3 py-1.5 text-xs text-white font-medium truncate">
                 {selectedPlace.name}
               </div>
             </div>
           </div>
 
           {/* ── Transport Modes ── */}
-          <div className="flex gap-2 mt-5">
+          <div className="flex gap-2 mt-4">
             <button
               onClick={() => setTransportMode('driving')}
-              className={`flex-1 py-2.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'driving' ? 'bg-white text-orange-600 shadow-md' : 'text-orange-100 hover:bg-orange-500/50'}`}
+              className={`flex-1 py-1.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'driving' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-100 hover:bg-orange-500/50'}`}
             >
-              <Car className="w-5 h-5" />
+              <Car className="w-4 h-4" />
             </button>
             <button
               onClick={() => setTransportMode('bike')}
-              className={`flex-1 py-2.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'bike' ? 'bg-white text-orange-600 shadow-md' : 'text-orange-100 hover:bg-orange-500/50'}`}
+              className={`flex-1 py-1.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'bike' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-100 hover:bg-orange-500/50'}`}
             >
-              <Bike className="w-5 h-5" />
+              <Bike className="w-4 h-4" />
             </button>
             <button
               onClick={() => setTransportMode('foot')}
-              className={`flex-1 py-2.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'foot' ? 'bg-white text-orange-600 shadow-md' : 'text-orange-100 hover:bg-orange-500/50'}`}
+              className={`flex-1 py-1.5 flex justify-center items-center rounded-lg transition-colors cursor-pointer ${transportMode === 'foot' ? 'bg-white text-orange-600 shadow-sm' : 'text-orange-100 hover:bg-orange-500/50'}`}
             >
-              <Footprints className="w-5 h-5" />
+              <Footprints className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -372,73 +402,46 @@ function SidebarContent({
         <div className={`p-4 space-y-4 bg-gray-900 ${isMobile ? '' : 'flex-1 overflow-y-auto'}`}>
           {isLoading ? (
              <div className="bg-gray-800 rounded-xl p-5 flex flex-col gap-3 animate-pulse border border-gray-700">
-               <div className="h-6 w-1/3 bg-gray-700 rounded-md"></div>
-               <div className="h-4 w-1/4 bg-gray-700 rounded-md"></div>
+               <div className="h-4 w-1/3 bg-gray-700 rounded-md"></div>
+               <div className="h-3 w-1/4 bg-gray-700 rounded-md"></div>
              </div>
           ) : routeError ? (
-             <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-sm flex items-center gap-3">
+             <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl text-xs flex items-center gap-3">
                <div className="w-2 h-2 bg-red-500 rounded-full" />
                {routeError}
              </div>
           ) : routeData ? (
              <div className="space-y-4">
-               <div className="bg-gray-800 border-l-4 border-orange-500 p-5 rounded-xl rounded-l-md shadow-lg border border-gray-700/50">
-                 <div className="flex justify-between items-start mb-4">
-                   <div>
-                     <h3 className="text-3xl font-bold text-green-400 tracking-tight">
-                       {formatDuration(routeData.duration, transportMode, routeData.distance)}
-                     </h3>
-                     <p className="text-gray-400 text-sm mt-1 flex items-center gap-1.5">
-                       <Navigation2 className="w-3 h-3 text-orange-500" />
-                       {formatDistance(routeData.distance)}
-                     </p>
-                   </div>
-                   <div className="w-10 h-10 rounded-full bg-orange-500/10 flex items-center justify-center text-orange-500 border border-orange-500/20">
-                     {transportMode === 'driving' ? <Car className="w-5 h-5" /> : transportMode === 'bike' ? <Bike className="w-5 h-5" /> : <Footprints className="w-5 h-5" />}
-                   </div>
-                 </div>
-
-                 {!isRouting ? (
-                   <button 
-                     onClick={() => setIsRouting(true)}
-                     className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-700 hover:to-orange-600 text-white py-3 rounded-xl font-bold text-sm transition-all shadow-lg active:scale-[0.98] cursor-pointer"
-                   >
-                     <Navigation2 className="w-4 h-4 fill-current" />
-                     Start Rute
-                   </button>
-                 ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-400">ETA (Estimasi Kedatangan)</span>
-                        <span className="text-white font-bold">{getETA(routeData.duration)}</span>
-                      </div>
-                      <div className="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden">
-                        <div className="bg-orange-500 h-full w-1/3 animate-pulse" />
-                      </div>
-                      <button 
-                        onClick={() => setIsRouting(false)}
-                        className="w-full flex items-center justify-center gap-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 py-3 rounded-xl font-bold text-sm transition-all cursor-pointer border border-red-500/30"
-                      >
-                        Hentikan Rute
-                      </button>
-                    </div>
-                 )}
-               </div>
-
                {isRouting && (
-                 <div className="bg-blue-500/10 border border-blue-500/20 rounded-xl p-4 flex items-center gap-3 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                    <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white flex-shrink-0 shadow-lg shadow-blue-500/20">
-                      <Navigation2 className="w-5 h-5 fill-current animate-bounce" />
+                 <div className="bg-gray-800 p-4 rounded-xl shadow-lg border border-gray-700/50 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex items-center justify-between text-xs mb-3">
+                      <span className="text-gray-400">ETA (Estimasi Kedatangan)</span>
+                      <span className="text-white font-bold">{getETA(routeData.duration)}</span>
                     </div>
-                    <div>
-                      <p className="text-xs text-blue-300 font-medium">Navigasi Aktif</p>
-                      <p className="text-sm text-white font-bold leading-tight">Sedang menuju ke {selectedPlace.name}</p>
+                    <div className="w-full bg-gray-700 h-1.5 rounded-full overflow-hidden mb-4">
+                      <div className="bg-orange-500 h-full w-1/3 animate-pulse" />
+                    </div>
+                    
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white flex-shrink-0 shadow-lg shadow-blue-500/20">
+                        <Navigation2 className="w-4 h-4 fill-current animate-bounce" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-blue-300 font-medium uppercase tracking-wider">Navigasi Aktif</p>
+                        <p className="text-xs text-white font-bold leading-tight">Menuju {selectedPlace.name}</p>
+                      </div>
                     </div>
                  </div>
                )}
+
+               {!isRouting && (
+                  <div className="text-gray-500 text-xs text-center py-4 opacity-60">
+                    Klik "Start" untuk memulai navigasi real-time.
+                  </div>
+               )}
              </div>
           ) : (
-             <div className="text-gray-500 text-sm text-center py-10 opacity-60 italic">
+             <div className="text-gray-500 text-xs text-center py-10 opacity-60 italic">
                Pilih mode transportasi untuk melihat rute.
              </div>
           )}
@@ -446,4 +449,5 @@ function SidebarContent({
       </div>
     </div>
   );
+}
 }
