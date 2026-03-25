@@ -139,7 +139,11 @@ export default function DirectionSidebar() {
     setIsDragging(false);
 
     if (sheetHeight < DISMISS_THRESHOLD) {
-      close();
+      if (isRouting) {
+        setSheetHeight(SNAP_MIN);
+      } else {
+        close();
+      }
     } else if (sheetHeight < (SNAP_MIN + SNAP_PEEK) / 2) {
       setSheetHeight(SNAP_MIN);
     } else if (sheetHeight < (SNAP_PEEK + SNAP_FULL) / 2) {
@@ -149,7 +153,7 @@ export default function DirectionSidebar() {
     } else {
       setSheetHeight(SNAP_MAX);
     }
-  }, [sheetHeight, close]);
+  }, [sheetHeight, close, isRouting]);
 
   /* ── watch position for active routing ── */
   useEffect(() => {
