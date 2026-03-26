@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserId, syncUserById } from '@/lib/user';
+import { getUserId } from '@/lib/user';
 
 // GET /api/reviews?placeId=... - Get reviews for a place
 export async function GET(req: NextRequest) {

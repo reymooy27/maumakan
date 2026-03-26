@@ -55,7 +55,7 @@ export async function GET(req: NextRequest, { params }: Params) {
     let currentUserId: string | null = null;
     try {
       currentUserId = await getUserId();
-    } catch (e) {
+    } catch {
       // Ignore auth errors for public profile view
     }
 

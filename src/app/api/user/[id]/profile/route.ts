@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserId } from "@/lib/user";
+import { getUserId, syncUserById } from "@/lib/user";
 
 type Params = { params: Promise<{ id: string }> };
 
