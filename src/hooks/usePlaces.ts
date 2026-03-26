@@ -18,8 +18,14 @@ function getDistanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function buildUrl(bounds: ReturnType<typeof useMapStore.getState>['bounds'], filters: Filters, search: string) {
+function buildUrl(
+  bounds: ReturnType<typeof useMapStore.getState>['bounds'], 
+  filters: Filters, 
+  search: string,
+  zoom: number
+) {
   const params = new URLSearchParams();
+  params.set('zoom', Math.round(zoom).toString());
   if (bounds) {
     params.set('north', (Math.ceil(bounds.north * 10) / 10).toString());
     params.set('south', (Math.floor(bounds.south * 10) / 10).toString());
@@ -51,9 +57,10 @@ export function usePlaces() {
   const filters = useMapStore((s) => s.filters);
   const searchQuery = useMapStore((s) => s.searchQuery);
   const center = useMapStore((s) => s.center);
+  const zoom = useMapStore((s) => s.zoom);
   const { savedPlaces } = useSavedPlaces();
 
-  const url = buildUrl(bounds, filters, searchQuery);
+  const url = buildUrl(bounds, filters, searchQuery, zoom);
   
   const { data, error, isLoading } = useSWR<Place[]>(url, fetcher, {
     refreshInterval: 60_000,

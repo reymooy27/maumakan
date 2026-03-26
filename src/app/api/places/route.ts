@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const south = searchParams.get('south');
   const east = searchParams.get('east');
   const west = searchParams.get('west');
+  const zoom = parseInt(searchParams.get('zoom') || '15');
   const search = searchParams.get('search') || '';
   const minRating = parseFloat(searchParams.get('minRating') || '0');
   const minPrice = parseInt(searchParams.get('minPrice') || '0');
@@ -61,21 +62,47 @@ export async function GET(req: NextRequest) {
 
     const where: Prisma.PlaceWhereInput = { AND: andConditions };
 
+    // Dynamic result limiting based on zoom:
+    // When zoomed out, we only want the most "important" (highly rated) places.
+    // This reduces the payload and keeps the map responsive.
+    let take = 100;
+    if (zoom < 10) take = 20;
+    else if (zoom < 12) take = 40;
+    else if (zoom < 14) take = 60;
+
+    // If we're zoomed out and NOT searching, we enforce an even stricter importance filter
+    // to mimic Google Maps showing only major landmarks.
+    if (!search && zoom < 14) {
+      andConditions.push({ rating: { gte: 4.2 } });
+    }
+
     let prismaOrderBy: Prisma.PlaceOrderByWithRelationInput = { rating: 'desc' };
     if (orderBy === 'favorites') {
       prismaOrderBy = { savedBy: { _count: 'desc' } };
     }
 
+    // Payload Reduction: We exclude menuItems and reviews from the list view.
+    // The frontend will fetch them on demand when a place is selected.
     let places = await prisma.place.findMany({
       where,
-      include: { 
-        menuItems: true,
+      select: { 
+        id: true,
+        name: true,
+        type: true,
+        address: true,
+        lat: true,
+        lng: true,
+        rating: true,
+        avgPrice: true,
+        openTime: true,
+        closeTime: true,
+        imageUrl: true,
         _count: {
           select: { savedBy: true }
         }
       },
       orderBy: prismaOrderBy,
-      take: 100,
+      take,
     });
 
     if (isOpenNow && currentTime !== -1) {

@@ -30,6 +30,7 @@ model Place {
   ownerId      String?      @map("owner_id")
   owner        User?        @relation("ownedPlaces", fields: [ownerId], references: [id], onDelete: SetNull)
 
+  @@index([lat, lng])
   @@map("places")
 }
 
