@@ -2,8 +2,9 @@
 
 import { usePlaces } from '@/hooks/usePlaces';
 import { useMapStore } from '@/store/mapStore';
+import { Place } from '@/types';
 import 'leaflet/dist/leaflet.css';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, useMapEvents, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import PlaceMarker from './PlaceMarker';
 import L from 'leaflet';
@@ -182,23 +183,52 @@ function RouteFitter({ geometry, isRouting }: { geometry: [number, number][] | n
   return null;
 }
 
+function CollisionMarkerLayer({ places }: { places: Place[] }) {
+  const map = useMap();
+  const zoom = useMapStore((s) => s.zoom);
+
+  // Grid-based pruning: Only show the best marker in each grid cell
+  // This is effectively "invisible clustering"
+  const prunedPlaces = useMemo(() => {
+    const result = [];
+    const grid = new Set();
+    
+    // Grid size depends on zoom: larger cells when zoomed out
+    const gridSize = zoom < 14 ? 60 : zoom < 16 ? 40 : 20;
+
+    // Sort by rating so we keep the "best" marker in each crowded area
+    const sorted = [...places].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+
+    for (const p of sorted) {
+      const point = map.latLngToLayerPoint([p.lat, p.lng]);
+      const gx = Math.floor(point.x / gridSize);
+      const gy = Math.floor(point.y / gridSize);
+      const key = `${gx}-${gy}`;
+
+      if (!grid.has(key)) {
+        grid.add(key);
+        result.push(p);
+      }
+    }
+    return result;
+  }, [places, zoom, map]);
+
+  return (
+    <>
+      {prunedPlaces.map((place) => (
+        <PlaceMarker key={place.id} place={place} />
+      ))}
+    </>
+  );
+}
+
 export default function MapView() {
   const routeGeometry = useMapStore((s) => s.routeGeometry);
   const isRouting = useMapStore((s) => s.isRouting);
   const userLocation = useMapStore((s) => s.userLocation);
   const { places } = usePlaces();
-  const zoom = useMapStore((s) => s.zoom);
-
-  // Optimized rendering: At low zoom, only show high-rated places
-  // This keeps the map fast and clean without visual clustering
-  const filteredPlaces = zoom < 14 
-    ? places.filter(p => p.rating >= 4.5).slice(0, 50) 
-    : zoom < 16 
-      ? places.filter(p => p.rating >= 4.0).slice(0, 100)
-      : places;
 
   // Create stable initial values. MapContainer only uses them on mount.
-  // This prevents the common "snap back" issues in react-leaflet.
   const [initialView] = useState(() => ({
     center: useMapStore.getState().center,
     zoom: useMapStore.getState().zoom
@@ -237,9 +267,8 @@ export default function MapView() {
         {/* Auto fit map bounds when a route is drawn or routing starts */}
         <RouteFitter geometry={routeGeometry} isRouting={isRouting} />
 
-        {filteredPlaces.map((place) => (
-          <PlaceMarker key={place.id} place={place} />
-        ))}
+        {/* Managed density layer - no visual clustering, but performant collision management */}
+        <CollisionMarkerLayer places={places} />
         
         <LocateControl position={userLocation} />
       </MapContainer>
