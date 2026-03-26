@@ -14,6 +14,16 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Missing placeId' }, { status: 400 });
     }
 
+    // Check if current user has reviewed (for UI state)
+    const session = await getServerSession(authOptions);
+    let currentUserId = session?.user?.id;
+
+    if (!currentUserId) {
+      const supabase = await createClient();
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+      currentUserId = supabaseUser?.id;
+    }
+
     const reviews = await prisma.review.findMany({
       where: { placeId },
       include: {
@@ -28,7 +38,11 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json(reviews);
+    const hasReviewed = currentUserId 
+      ? reviews.some(r => r.userId === currentUserId)
+      : false;
+
+    return NextResponse.json({ reviews, hasReviewed });
   } catch (err) {
     console.error('[GET /api/reviews]', err);
     return NextResponse.json({ error: 'Failed to fetch reviews' }, { status: 500 });
@@ -57,6 +71,15 @@ export async function POST(req: NextRequest) {
 
     if (!placeId || rating == null) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    // Check if user already reviewed this place
+    const existingReview = await prisma.review.findFirst({
+      where: { placeId, userId }
+    });
+
+    if (existingReview) {
+      return NextResponse.json({ error: 'Anda sudah memberikan review untuk tempat ini' }, { status: 400 });
     }
 
     const review = await prisma.review.create({

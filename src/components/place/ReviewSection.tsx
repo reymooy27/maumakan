@@ -4,7 +4,7 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
 import { useAuthStore } from '@/store/authStore';
-import { Star, MessageSquare, Send, Loader2, User } from 'lucide-react';
+import { Star, MessageSquare, Send, Loader2, User, Check } from 'lucide-react';
 import Image from 'next/image';
 import { formatDistanceToNow } from 'date-fns';
 import { id as localeId } from 'date-fns/locale';
@@ -23,6 +23,11 @@ interface Review {
   user: User;
 }
 
+interface ReviewResponse {
+  reviews: Review[];
+  hasReviewed: boolean;
+}
+
 const fetcher = (url: string) => fetch(url).then(r => r.json());
 
 export default function ReviewSection({ placeId }: { placeId: string }) {
@@ -30,10 +35,13 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
   const { user: supabaseUser } = useAuthStore();
   const isAuthenticated = !!session || !!supabaseUser;
 
-  const { data: reviews, mutate, isLoading } = useSWR<Review[]>(
+  const { data, mutate, isLoading } = useSWR<ReviewResponse>(
     placeId ? `/api/reviews?placeId=${placeId}` : null,
     fetcher
   );
+
+  const reviews = data?.reviews || [];
+  const hasReviewed = data?.hasReviewed || false;
 
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -76,12 +84,22 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
           Review & Komentar
         </h3>
         <span className="text-sm text-gray-500 font-bold">
-          {reviews?.length || 0} Review
+          {reviews.length} Review
         </span>
       </div>
 
       {/* Write Review */}
-      {isAuthenticated ? (
+      {hasReviewed ? (
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-3xl p-6 text-center space-y-2">
+          <div className="inline-flex p-3 bg-emerald-500/20 rounded-full mb-2">
+            <Check className="w-6 h-6 text-emerald-400" />
+          </div>
+          <h4 className="text-lg font-black text-white italic">Terima Kasih!</h4>
+          <p className="text-sm text-emerald-400/80 font-medium leading-relaxed">
+            Review Anda telah kami simpan. Feedback Anda sangat membantu pengguna lain dalam memilih tempat makan!
+          </p>
+        </div>
+      ) : isAuthenticated ? (
         <form onSubmit={handleSubmit} className="bg-gray-900/50 border border-gray-800 rounded-3xl p-4 space-y-4">
           <div className="flex flex-col items-center gap-2">
             <span className="text-xs text-gray-500 uppercase font-black tracking-widest">Berikan Rating</span>
@@ -142,7 +160,7 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
           [1, 2].map(i => (
             <div key={i} className="h-24 bg-gray-900 animate-pulse rounded-3xl" />
           ))
-        ) : reviews && reviews.length > 0 ? (
+        ) : reviews.length > 0 ? (
           reviews.map((review) => (
             <div key={review.id} className="bg-gray-900/30 border border-gray-800 rounded-3xl p-4 space-y-3">
               <div className="flex items-center justify-between">
