@@ -6,6 +6,7 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, useMapEvents, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import PlaceMarker from './PlaceMarker';
+import MarkerClusterGroup from './MarkerClusterGroup';
 import L from 'leaflet';
 import { LocateFixed } from 'lucide-react';
 
@@ -227,9 +228,11 @@ export default function MapView() {
         {/* Auto fit map bounds when a route is drawn or routing starts */}
         <RouteFitter geometry={routeGeometry} isRouting={isRouting} />
 
-        {places.map((place) => (
-          <PlaceMarker key={place.id} place={place} />
-        ))}
+        <MarkerClusterGroup chunkedLoading={true} maxClusterRadius={50}>
+          {places.map((place) => (
+            <PlaceMarker key={place.id} place={place} />
+          ))}
+        </MarkerClusterGroup>
         
         <LocateControl position={userLocation} />
       </MapContainer>
