@@ -1,13 +1,14 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import useSWR from 'swr';
-import { useSession } from 'next-auth/react';
-import { useAuthStore } from '@/store/authStore';
-import { Star, MessageSquare, Send, Loader2, User, Check } from 'lucide-react';
-import Image from 'next/image';
-import { formatDistanceToNow } from 'date-fns';
-import { id as localeId } from 'date-fns/locale';
+import { useState } from "react";
+import useSWR from "swr";
+import { useSession } from "next-auth/react";
+import { useAuthStore } from "@/store/authStore";
+import { Star, MessageSquare, Send, Loader2, User, Check } from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 
 interface User {
   id: string;
@@ -28,7 +29,7 @@ interface ReviewResponse {
   hasReviewed: boolean;
 }
 
-const fetcher = (url: string) => fetch(url).then(r => r.json());
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function ReviewSection({ placeId }: { placeId: string }) {
   const { data: session } = useSession();
@@ -37,40 +38,40 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
 
   const { data, mutate, isLoading } = useSWR<ReviewResponse>(
     placeId ? `/api/reviews?placeId=${placeId}` : null,
-    fetcher
+    fetcher,
   );
 
   const reviews = data?.reviews || [];
   const hasReviewed = data?.hasReviewed || false;
 
   const [rating, setRating] = useState(0);
-  const [comment, setComment] = useState('');
+  const [comment, setComment] = useState("");
   const [hoverRating, setHoverRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rating) return alert('Silakan berikan rating!');
-    
+    if (!rating) return alert("Silakan berikan rating!");
+
     setIsSubmitting(true);
     try {
-      const res = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/reviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ placeId, rating, comment }),
       });
 
       if (res.ok) {
         setRating(0);
-        setComment('');
+        setComment("");
         mutate();
       } else {
         const data = await res.json();
-        alert(data.error || 'Gagal mengirim review');
+        alert(data.error || "Gagal mengirim review");
       }
     } catch (err) {
       console.error(err);
-      alert('Terjadi kesalahan');
+      alert("Terjadi kesalahan");
     } finally {
       setIsSubmitting(false);
     }
@@ -94,15 +95,23 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
           <div className="inline-flex p-3 bg-emerald-500/20 rounded-full mb-2">
             <Check className="w-6 h-6 text-emerald-400" />
           </div>
-          <h4 className="text-lg font-black text-white italic">Terima Kasih!</h4>
+          <h4 className="text-lg font-black text-white italic">
+            Terima Kasih!
+          </h4>
           <p className="text-sm text-emerald-400/80 font-medium leading-relaxed">
-            Review Anda telah kami simpan. Feedback Anda sangat membantu pengguna lain dalam memilih tempat makan!
+            Review Anda telah kami simpan. Feedback Anda sangat membantu
+            pengguna lain dalam memilih tempat makan!
           </p>
         </div>
       ) : isAuthenticated ? (
-        <form onSubmit={handleSubmit} className="bg-gray-900/50 border border-gray-800 rounded-3xl p-4 space-y-4">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-gray-900/50 border border-gray-800 rounded-3xl p-4 space-y-4"
+        >
           <div className="flex flex-col items-center gap-2">
-            <span className="text-xs text-gray-500 uppercase font-black tracking-widest">Berikan Rating</span>
+            <span className="text-xs text-gray-500 uppercase font-black tracking-widest">
+              Berikan Rating
+            </span>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button
@@ -113,12 +122,12 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
                   onMouseLeave={() => setHoverRating(0)}
                   className="p-1 transition-transform active:scale-90"
                 >
-                  <Star 
+                  <Star
                     className={`w-8 h-8 ${
-                      star <= (hoverRating || rating) 
-                        ? 'fill-orange-500 text-orange-500' 
-                        : 'text-gray-700'
-                    } transition-colors`} 
+                      star <= (hoverRating || rating)
+                        ? "fill-orange-500 text-orange-500"
+                        : "text-gray-700"
+                    } transition-colors`}
                   />
                 </button>
               ))}
@@ -147,7 +156,9 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
         </form>
       ) : (
         <div className="bg-gray-900/30 border border-gray-800 border-dashed rounded-3xl p-6 text-center">
-          <p className="text-sm text-gray-500 font-medium mb-3">Login untuk memberikan review</p>
+          <p className="text-sm text-gray-500 font-medium mb-3">
+            Login untuk memberikan review
+          </p>
           <button className="text-xs font-black text-orange-500 uppercase tracking-widest hover:underline">
             Sign In Sekarang
           </button>
@@ -157,37 +168,57 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
       {/* Review List */}
       <div className="space-y-4">
         {isLoading ? (
-          [1, 2].map(i => (
-            <div key={i} className="h-24 bg-gray-900 animate-pulse rounded-3xl" />
+          [1, 2].map((i) => (
+            <div
+              key={i}
+              className="h-24 bg-gray-900 animate-pulse rounded-3xl"
+            />
           ))
         ) : reviews.length > 0 ? (
           reviews.map((review) => (
-            <div key={review.id} className="bg-gray-900/30 border border-gray-800 rounded-3xl p-4 space-y-3">
+            <div
+              key={review.id}
+              className="bg-gray-900/30 border border-gray-800 rounded-3xl p-4 space-y-3"
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-800 border border-gray-700">
+                  <Link
+                    href={`/profile/${review.user.id}`}
+                    className="relative w-8 h-8 rounded-full overflow-hidden bg-gray-800 border border-gray-700 hover:border-orange-500 transition-colors group/avatar"
+                  >
                     {review.user.image ? (
-                      <Image src={review.user.image} alt={review.user.name || ''} fill className="object-cover" />
+                      <Image
+                        src={review.user.image}
+                        alt={review.user.name || ""}
+                        fill
+                        className="object-cover group-hover/avatar:scale-110 transition-transform"
+                      />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
                         <User className="w-4 h-4 text-gray-600" />
                       </div>
                     )}
-                  </div>
+                  </Link>
                   <div className="flex flex-col">
-                    <span className="text-sm font-bold text-white leading-tight">
-                      {review.user.name || 'User'}
-                    </span>
+                    <Link
+                      href={`/profile/${review.user.id}`}
+                      className="text-sm font-bold text-white leading-tight hover:text-orange-500 transition-colors"
+                    >
+                      {review.user.name || "User"}
+                    </Link>
                     <span className="text-[10px] text-gray-500 font-medium">
-                      {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: localeId })}
+                      {formatDistanceToNow(new Date(review.createdAt), {
+                        addSuffix: true,
+                        locale: localeId,
+                      })}
                     </span>
                   </div>
                 </div>
                 <div className="flex gap-0.5">
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <Star 
-                      key={s} 
-                      className={`w-3 h-3 ${s <= review.rating ? 'fill-orange-500 text-orange-500' : 'text-gray-700'}`} 
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <Star
+                      key={s}
+                      className={`w-3 h-3 ${s <= review.rating ? "fill-orange-500 text-orange-500" : "text-gray-700"}`}
                     />
                   ))}
                 </div>
@@ -201,7 +232,9 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
           ))
         ) : (
           <div className="py-8 text-center">
-            <p className="text-sm text-gray-600 font-medium italic">Belum ada review. Jadilah yang pertama!</p>
+            <p className="text-sm text-gray-600 font-medium italic">
+              Belum ada review. Jadilah yang pertama!
+            </p>
           </div>
         )}
       </div>

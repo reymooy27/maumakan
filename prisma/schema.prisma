@@ -79,8 +79,24 @@ model User {
   reviews       Review[]
   photos        Photo[]
   ownedPlaces   Place[]      @relation("ownedPlaces")
+  
+  // Social
+  followers     Follow[]     @relation("following")
+  following     Follow[]     @relation("follower")
 
   @@map("users")
+}
+
+model Follow {
+  followerId  String @map("follower_id")
+  followingId String @map("following_id")
+  createdAt   DateTime @default(now())
+
+  follower    User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@map("follows")
 }
 
 model VerificationToken {
