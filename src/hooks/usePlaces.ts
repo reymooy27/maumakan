@@ -32,6 +32,7 @@ function buildUrl(bounds: ReturnType<typeof useMapStore.getState>['bounds'], fil
   if (filters.maxPrice < 500000) params.set('maxPrice', String(filters.maxPrice));
   if (filters.amenities.length > 0) params.set('amenities', filters.amenities.join(','));
   if (filters.dietaryTags.length > 0) params.set('dietary', filters.dietaryTags.join(','));
+  if (filters.orderBy) params.set('orderBy', filters.orderBy);
   
   if (filters.isOpenNow) {
     params.set('isOpenNow', 'true');

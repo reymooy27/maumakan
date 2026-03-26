@@ -17,6 +17,7 @@ export async function GET(req: NextRequest) {
   const currentTime = parseInt(searchParams.get('currentTime') || '-1'); // Minutes from midnight
   const amenitiesParam = searchParams.get('amenities');
   const dietaryParam = searchParams.get('dietary');
+  const orderBy = searchParams.get('orderBy') || 'rating';
   const amenities = amenitiesParam ? amenitiesParam.split(',').filter(Boolean) : [];
   const dietary = dietaryParam ? dietaryParam.split(',').filter(Boolean) : [];
 
@@ -60,10 +61,20 @@ export async function GET(req: NextRequest) {
 
     const where: Prisma.PlaceWhereInput = { AND: andConditions };
 
+    let prismaOrderBy: Prisma.PlaceOrderByWithRelationInput = { rating: 'desc' };
+    if (orderBy === 'favorites') {
+      prismaOrderBy = { savedBy: { _count: 'desc' } };
+    }
+
     let places = await prisma.place.findMany({
       where,
-      include: { menuItems: true },
-      orderBy: { rating: 'desc' },
+      include: { 
+        menuItems: true,
+        _count: {
+          select: { savedBy: true }
+        }
+      },
+      orderBy: prismaOrderBy,
       take: 100,
     });
 

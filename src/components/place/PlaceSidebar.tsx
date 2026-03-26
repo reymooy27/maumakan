@@ -292,6 +292,12 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
               <span className="text-sm">{p.distance.toFixed(1)} km</span>
             </div>
           )}
+
+          {/* Favorite Counter */}
+          <div className="flex items-center gap-1 text-red-400" title={`${p._count?.savedBy || 0} users saved this`}>
+            <Heart className="w-4 h-4 fill-current" />
+            <span className="text-sm font-semibold">{p._count?.savedBy || 0}</span>
+          </div>
         </div>
 
         {/* Status and Hours */}

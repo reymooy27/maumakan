@@ -9,7 +9,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
   try {
     const place = await prisma.place.findUnique({
       where: { id },
-      include: { menuItems: true, reviews: true },
+      include: { 
+        menuItems: true, 
+        reviews: true,
+        _count: {
+          select: { savedBy: true }
+        }
+      },
     });
     if (!place) return NextResponse.json({ error: 'Not found' }, { status: 404 });
     return NextResponse.json(place);

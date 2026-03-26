@@ -20,6 +20,9 @@ export interface Place {
   distance?: number; // km, computed client-side
   amenities?: string[];
   photos?: Photo[];
+  _count?: {
+    savedBy: number;
+  };
 }
 
 export interface MenuItem {
@@ -63,6 +66,7 @@ export interface Filters {
   amenities: string[];
   dietaryTags: string[];
   onlySaved: boolean; // New: Toggle for favorites view
+  orderBy?: 'rating' | 'favorites';
 }
 
 export interface MapBounds {

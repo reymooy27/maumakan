@@ -61,6 +61,33 @@ export default function FilterPanel() {
         </div>
 
         <div className="p-5 space-y-7 h-[calc(100%-80px)] overflow-y-auto">
+          {/* Sort By */}
+          <div className="space-y-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Sort By</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setFilters({ orderBy: 'rating' })}
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  filters.orderBy === 'rating' || !filters.orderBy
+                    ? 'bg-orange-500 border-orange-400 text-white shadow-lg'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                }`}
+              >
+                Best Rated
+              </button>
+              <button
+                onClick={() => setFilters({ orderBy: 'favorites' })}
+                className={`px-3 py-2.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  filters.orderBy === 'favorites'
+                    ? 'bg-orange-500 border-orange-400 text-white shadow-lg'
+                    : 'bg-gray-800 border-gray-700 text-gray-400 hover:border-gray-600'
+                }`}
+              >
+                Most Favorites
+              </button>
+            </div>
+          </div>
+
           {/* Open Now Toggle */}
           <div className="flex items-center justify-between bg-gray-800/50 p-3 rounded-xl border border-gray-700/50">
              <div>
