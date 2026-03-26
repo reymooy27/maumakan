@@ -187,16 +187,26 @@ function CollisionMarkerLayer({ places }: { places: Place[] }) {
   const map = useMap();
   const zoom = useMapStore((s) => s.zoom);
 
-  // Grid-based pruning: Only show the best marker in each grid cell
-  // This is effectively "invisible clustering"
+  // Semantic Density Management:
+  // At low zoom, we use large grid cells to only show a few high-quality "anchor" points.
+  // At high zoom, we reduce the grid size to show everything.
   const prunedPlaces = useMemo(() => {
     const result = [];
     const grid = new Set();
     
-    // Grid size depends on zoom: larger cells when zoomed out
-    const gridSize = zoom < 14 ? 60 : zoom < 16 ? 40 : 20;
+    // Dynamic grid size: higher values = fewer markers
+    let gridSize = 0;
+    if (zoom < 10) gridSize = 150;
+    else if (zoom < 12) gridSize = 120;
+    else if (zoom < 14) gridSize = 80;
+    else if (zoom < 15) gridSize = 50;
+    else if (zoom < 16) gridSize = 30;
+    else gridSize = 0; // Show everything when zoomed in close
 
-    // Sort by rating so we keep the "best" marker in each crowded area
+    // If gridSize is 0, don't prune at all
+    if (gridSize === 0) return places;
+
+    // Sort by rating desc to ensure we keep the most "important" places in each grid cell
     const sorted = [...places].sort((a, b) => (b.rating || 0) - (a.rating || 0));
 
     for (const p of sorted) {
@@ -210,7 +220,10 @@ function CollisionMarkerLayer({ places }: { places: Place[] }) {
         result.push(p);
       }
     }
-    return result;
+    
+    // Limit total markers on screen for extreme performance
+    const maxVisible = zoom < 13 ? 30 : zoom < 15 ? 60 : 100;
+    return result.slice(0, maxVisible);
   }, [places, zoom, map]);
 
   return (
