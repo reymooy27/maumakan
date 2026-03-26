@@ -6,7 +6,6 @@ import 'leaflet/dist/leaflet.css';
 import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, useMapEvents, Marker, Popup, useMap, Polyline } from 'react-leaflet';
 import PlaceMarker from './PlaceMarker';
-import MarkerClusterGroup from './MarkerClusterGroup';
 import L from 'leaflet';
 import { LocateFixed } from 'lucide-react';
 
@@ -188,6 +187,15 @@ export default function MapView() {
   const isRouting = useMapStore((s) => s.isRouting);
   const userLocation = useMapStore((s) => s.userLocation);
   const { places } = usePlaces();
+  const zoom = useMapStore((s) => s.zoom);
+
+  // Optimized rendering: At low zoom, only show high-rated places
+  // This keeps the map fast and clean without visual clustering
+  const filteredPlaces = zoom < 14 
+    ? places.filter(p => p.rating >= 4.5).slice(0, 50) 
+    : zoom < 16 
+      ? places.filter(p => p.rating >= 4.0).slice(0, 100)
+      : places;
 
   // Create stable initial values. MapContainer only uses them on mount.
   // This prevents the common "snap back" issues in react-leaflet.
@@ -205,6 +213,7 @@ export default function MapView() {
         maxZoom={22}
         className="w-full h-full z-0"
         zoomControl={false}
+        preferCanvas={true}
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -228,11 +237,9 @@ export default function MapView() {
         {/* Auto fit map bounds when a route is drawn or routing starts */}
         <RouteFitter geometry={routeGeometry} isRouting={isRouting} />
 
-        <MarkerClusterGroup chunkedLoading={true} maxClusterRadius={50}>
-          {places.map((place) => (
-            <PlaceMarker key={place.id} place={place} />
-          ))}
-        </MarkerClusterGroup>
+        {filteredPlaces.map((place) => (
+          <PlaceMarker key={place.id} place={place} />
+        ))}
         
         <LocateControl position={userLocation} />
       </MapContainer>
