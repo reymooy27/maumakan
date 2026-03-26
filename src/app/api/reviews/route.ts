@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server';
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
+import { getUserId } from '@/lib/user';
 
 // GET /api/reviews?placeId=... - Get reviews for a place
 export async function GET(req: NextRequest) {
@@ -15,14 +13,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Check if current user has reviewed (for UI state)
-    const session = await getServerSession(authOptions);
-    let currentUserId = session?.user?.id;
-
-    if (!currentUserId) {
-      const supabase = await createClient();
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-      currentUserId = supabaseUser?.id;
-    }
+    const currentUserId = await getUserId();
 
     const reviews = await prisma.review.findMany({
       where: { placeId },
@@ -52,15 +43,7 @@ export async function GET(req: NextRequest) {
 // POST /api/reviews - Submit a review (auth required)
 export async function POST(req: NextRequest) {
   try {
-    // Check both Supabase and NextAuth
-    const session = await getServerSession(authOptions);
-    let userId = session?.user?.id;
-
-    if (!userId) {
-      const supabase = await createClient();
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-      userId = supabaseUser?.id;
-    }
+    const userId = await getUserId();
 
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

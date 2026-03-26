@@ -84,11 +84,23 @@ export default function PublicProfilePage() {
     );
   }
 
-  if (error || !profile) {
+  if (error || !profile || ('error' in profile)) {
     return (
-      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center space-y-4 p-4">
-        <h1 className="text-2xl font-bold text-white text-center">User not found</h1>
-        <Link href="/" className="px-6 py-2 bg-orange-600 text-white rounded-xl font-bold">Back to Map</Link>
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center space-y-4 p-4 text-center">
+        <div className="w-20 h-20 bg-gray-900 rounded-3xl flex items-center justify-center mb-2">
+          <User className="w-10 h-10 text-gray-700" />
+        </div>
+        <h1 className="text-2xl font-black text-white tracking-tight">
+          {error ? 'Terjadi Kesalahan' : 'User tidak ditemukan'}
+        </h1>
+        <p className="text-gray-500 max-w-xs mx-auto text-sm font-medium">
+          {error 
+            ? 'Gagal memuat profil user. Silakan coba lagi nanti.' 
+            : 'Profil yang Anda cari tidak tersedia atau telah dihapus.'}
+        </p>
+        <Link href="/" className="mt-4 px-8 py-3 bg-orange-600 text-white rounded-2xl font-bold shadow-lg shadow-orange-600/20 active:scale-95 transition-all">
+          Kembali ke Map
+        </Link>
       </div>
     );
   }

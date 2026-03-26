@@ -26,7 +26,7 @@ export async function GET(req: NextRequest, { params }: Params) {
         id: true,
         name: true,
         image: true,
-        email: true, // We might want to hide this for privacy, or only show if requested
+        email: true,
         _count: {
           select: {
             followers: true,
@@ -35,15 +35,16 @@ export async function GET(req: NextRequest, { params }: Params) {
           }
         },
         savedPlaces: {
-          include: {
-            place: true
+          select: {
+            id: true,
+            place: true,
           }
         }
       }
     });
 
     if (!user) {
-      return new NextResponse("User not found", { status: 404 });
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // Check if current user is following this user
