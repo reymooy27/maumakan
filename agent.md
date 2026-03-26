@@ -51,6 +51,11 @@ Maumakan is a modern web application, a map based app, the interface is a map li
 -   Always consider scalability and performance implications.
 -   Ensure security best practices are followed at all times.
 
+## Deployment & Quality Standards
+- **Linting**: Always run `npm run lint` after making code changes to ensure code quality and consistency.
+- **Build Verification**: Always run `npm run build` to check for build errors before pushing to the `stage` branch or deploying to production.
+- **Staging-First Workflow**: Always stage changes and push to the `stage` branch (`git push origin master:stage`) for verification before merging or pushing to the `master` branch.
+
 ## Guidelines
 - For executing command line make sure to use Powershell command
 - Always use the best practices used by the community
