@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getUserId } from '@/lib/user';
+import { getUserId, syncUserById } from '@/lib/user';
 
 // GET /api/reviews?placeId=... - Get reviews for a place
 export async function GET(req: NextRequest) {
@@ -28,6 +28,10 @@ export async function GET(req: NextRequest) {
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // Background sync: ensure reviewers exist in Prisma if they somehow aren't (optional but safe)
+    // We don't await this to keep GET fast, or we could have synced during POST.
+    // Actually, syncUserById is best used during POST.
 
     const hasReviewed = currentUserId 
       ? reviews.some(r => r.userId === currentUserId)

@@ -7,11 +7,13 @@ type Params = { params: Promise<{ id: string }> };
 export async function GET(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
+    console.log("[USER_PROFILE_GET] Requested ID:", id);
 
     // Get current user to check if following, ignore auth errors
     let currentUserId: string | null = null;
     try {
       currentUserId = await getUserId();
+      console.log("[USER_PROFILE_GET] Current User ID:", currentUserId);
     } catch (authError) {
       console.warn("[USER_PROFILE_GET] Auth check failed:", authError);
       // Continue without current user ID
@@ -40,7 +42,10 @@ export async function GET(req: NextRequest, { params }: Params) {
       }
     });
 
+    console.log("[USER_PROFILE_GET] Prisma result for ID " + id + ":", !!user);
+
     if (!user) {
+      console.error("[USER_PROFILE_GET] User not found in database for ID:", id);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 

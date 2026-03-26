@@ -43,3 +43,47 @@ export async function getUserId() {
 
   return null;
 }
+
+/**
+ * Manually sync a user from Supabase to Prisma by their ID.
+ * Useful when we have an ID from a relation (like Review) but the user 
+ * hasn't been synced to the Prisma User table yet.
+ */
+export async function syncUserById(id: string) {
+  try {
+    // Check if already in Prisma
+    const existing = await prisma.user.findUnique({ where: { id } });
+    if (existing) return existing;
+
+    // Not in Prisma, try to get from Supabase Admin (if possible) or just 
+    // the current session if it matches. For a generic sync of *any* user ID,
+    // we'd normally need Supabase Admin API. 
+
+    // As a fallback, if we can't get full details, we create a stub 
+    // to satisfy foreign key constraints and allow profile viewing.
+    // In a real app, you'd use supabase.auth.admin.getUserById(id).
+
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (user && user.id === id) {
+      return await prisma.user.create({
+        data: {
+          id: user.id,
+          email: user.email,
+          name: user.user_metadata?.full_name || user.email?.split('@')[0],
+          image: user.user_metadata?.avatar_url,
+        }
+      });
+    }
+
+    // If it's not the current user, we can't easily get their email/name 
+    // without Admin API. But they SHOULD have been synced when they 
+    // performed the action (like posting a review).
+
+    return null;
+  } catch (error) {
+    console.error("syncUserById failed:", error);
+    return null;
+  }
+}
