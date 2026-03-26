@@ -13,26 +13,32 @@ export async function getUserId() {
   if (session?.user?.id) return session.user.id;
 
   // Try Supabase session
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  
-  if (user) {
-    // Find or create user in Prisma to sync with Supabase
-    let prismaUser = await prisma.user.findUnique({
-      where: { email: user.email || "" }
-    });
-
-    if (!prismaUser && user.email) {
-      prismaUser = await prisma.user.create({
-        data: {
-          id: user.id,
-          email: user.email,
-          name: user.user_metadata?.full_name || user.email.split('@')[0],
-          image: user.user_metadata?.avatar_url,
-        }
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (user) {
+      // Find or create user in Prisma to sync with Supabase
+      let prismaUser = await prisma.user.findUnique({
+        where: { email: user.email || "" }
       });
+
+      if (!prismaUser && user.email) {
+        prismaUser = await prisma.user.create({
+          data: {
+            id: user.id,
+            email: user.email,
+            name: user.user_metadata?.full_name || user.email.split('@')[0],
+            image: user.user_metadata?.avatar_url,
+          }
+        });
+      }
+      return prismaUser?.id || user.id; // Return Supabase ID even if sync failed
     }
-    return prismaUser?.id || user.id; // Return Supabase ID even if sync failed
+  } catch (error) {
+    // Supabase client creation can fail if NEXT_PUBLIC_SUPABASE_URL is missing
+    // or if cookies() is called in an environment where it's not available.
+    console.warn("getUserId: Supabase auth check skipped:", error instanceof Error ? error.message : error);
   }
 
   return null;

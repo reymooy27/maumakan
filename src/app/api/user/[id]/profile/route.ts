@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getUserId } from "@/lib/user";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -10,14 +8,13 @@ export async function GET(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
 
-    // Get current user to check if following
-    const session = await getServerSession(authOptions);
-    let currentUserId = session?.user?.id;
-
-    if (!currentUserId) {
-      const supabase = await createClient();
-      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
-      currentUserId = supabaseUser?.id;
+    // Get current user to check if following, ignore auth errors
+    let currentUserId: string | null = null;
+    try {
+      currentUserId = await getUserId();
+    } catch (authError) {
+      console.warn("[USER_PROFILE_GET] Auth check failed:", authError);
+      // Continue without current user ID
     }
 
     const user = await prisma.user.findUnique({
@@ -68,6 +65,6 @@ export async function GET(req: NextRequest, { params }: Params) {
     });
   } catch (error) {
     console.error("[USER_PROFILE_GET]", error);
-    return new NextResponse("Internal Error", { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
