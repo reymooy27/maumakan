@@ -1,7 +1,7 @@
 'use client';
 
 import { useMapStore } from '@/store/mapStore';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { X, Search, MapPin, Map as MapIcon, Star } from 'lucide-react';
 import { Place } from '@/types';
 
@@ -38,19 +38,22 @@ export default function SearchSidebar() {
   const [isVisible, setIsVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rawResults, setRawResults] = useState<Place[]>([]);
 
-  /* ── Fetch and sort results ── */
+  /* ── Fetch results when query or filters change ── */
   useEffect(() => {
     let active = true;
 
     async function fetchResults() {
-      if (!searchSidebarOpen || !searchQuery.trim()) return;
+      if (!searchSidebarOpen || !searchQuery.trim()) {
+        setRawResults([]);
+        return;
+      }
 
       setIsLoading(true);
       setError(null);
 
       try {
-        // Fetch all places matching the query, taking active amenities/dietary tags into account
         const params = new URLSearchParams();
         params.set('search', searchQuery);
         if (filters.amenities.length > 0) params.set('amenities', filters.amenities.join(','));
@@ -63,30 +66,14 @@ export default function SearchSidebar() {
         if (!active) return;
 
         if (Array.isArray(data)) {
-          // Calculate distance to map center for sorting
-          const R = 6371; // Earth radius in km
-          const withDistances = data.map((p: Place) => {
-            const dLat = ((p.lat - center[0]) * Math.PI) / 180;
-            const dLon = ((p.lng - center[1]) * Math.PI) / 180;
-            const a =
-              Math.sin(dLat / 2) ** 2 +
-              Math.cos((center[0] * Math.PI) / 180) *
-                Math.cos((p.lat * Math.PI) / 180) *
-                Math.sin(dLon / 2) ** 2;
-            const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return { ...p, distance };
-          });
-
-          // Sort by distance (closest first) and take top 5
-          withDistances.sort((a, b) => a.distance - b.distance);
-          setSearchResults(withDistances.slice(0, 5));
+          setRawResults(data);
         } else {
-          setSearchResults([]);
+          setRawResults([]);
           setError(data.error || 'Failed to fetch results');
         }
       } catch {
         if (!active) return;
-        setSearchResults([]);
+        setRawResults([]);
         setError('Network error');
       } finally {
         if (active) setIsLoading(false);
@@ -96,7 +83,33 @@ export default function SearchSidebar() {
     fetchResults();
 
     return () => { active = false; };
-  }, [searchSidebarOpen, searchQuery, center, setSearchResults, filters.amenities, filters.dietaryTags]);
+  }, [searchSidebarOpen, searchQuery, filters.amenities, filters.dietaryTags]);
+
+  /* ── Process and sort results by distance to map center (local only, no refetch) ── */
+  const sortedByDistance = useMemo(() => {
+    if (!rawResults.length) return [];
+
+    const R = 6371; // Earth radius in km
+    const withDistances = rawResults.map((p: Place) => {
+      const dLat = ((p.lat - center[0]) * Math.PI) / 180;
+      const dLon = ((p.lng - center[1]) * Math.PI) / 180;
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos((center[0] * Math.PI) / 180) *
+          Math.cos((p.lat * Math.PI) / 180) *
+          Math.sin(dLon / 2) ** 2;
+      const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return { ...p, distance };
+    });
+
+    // Sort by distance (closest first) and take top 10 for search
+    return withDistances.sort((a, b) => a.distance - b.distance).slice(0, 10);
+  }, [rawResults, center]);
+
+  /* ── Sync sorted results to global store for markers ── */
+  useEffect(() => {
+    setSearchResults(sortedByDistance);
+  }, [sortedByDistance, setSearchResults]);
 
   /* ── open / close animation ── */
   useEffect(() => {
