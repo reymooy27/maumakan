@@ -38,7 +38,7 @@ async function main() {
       imageUrl: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?auto=format&fit=crop&w=500&q=80',
       menu: [
         { name: 'Sei Babi Reguler', price: 40000, description: 'Daging asap khas Kupang dengan sambal lu\'at' },
-        { name: 'Sei Babi Spesial', price: 55000, description: 'Porsi besar sei babi dengan tumis bunga pepaya' },
+        { name: 'Sei Babi Spesial', price: 55000, description: 'Porsi besar sei babi with tumis bunga pepaya' },
         { name: 'Rusuk Babi Bakar', price: 65000, description: 'Rusuk babi bakar empuk bumbu rahasia' },
         { name: 'Tumis Bunga Pepaya', price: 15000, description: 'Sayuran khas NTT pendamping sei' },
         { name: 'Nasi Putih', price: 5000, description: 'Nasi hangat' },
@@ -57,8 +57,8 @@ async function main() {
       imageUrl: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=500&q=80',
       menu: [
         { name: 'Bakso Urat', price: 15000, description: 'Bakso sapi urat besar dan gurih' },
-        { name: 'Mie Ayam Solo', price: 12000, description: 'Mie ayam dengan topping ayam kecap manis' },
-        { name: 'Mie Ayam Bakso', price: 18000, description: 'Mie ayam lengkap dengan bakso' },
+        { name: 'Mie Ayam Solo', price: 12000, description: 'Mie ayam with topping ayam kecap manis' },
+        { name: 'Mie Ayam Bakso', price: 18000, description: 'Mie ayam lengkap with bakso' },
         { name: 'Es Teh Manis', price: 5000, description: 'Minuman teh segar' },
         { name: 'Es Jeruk', price: 7000, description: 'Jeruk peras murni dingin' },
       ]
@@ -76,9 +76,9 @@ async function main() {
       imageUrl: 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=500&q=80',
       menu: [
         { name: 'Kopi Ja\'o', price: 20000, description: 'Kopi hitam khas Flores' },
-        { name: 'Cafe Latte', price: 30000, description: 'Espresso dengan susu lembut' },
-        { name: 'Steak Ayam', price: 45000, description: 'Daging ayam panggang dengan kentang goreng' },
-        { name: 'Roti Bakar Keju', price: 15000, description: 'Roti bakar manis dengan taburan keju melimpah' },
+        { name: 'Cafe Latte', price: 30000, description: 'Espresso with susu lembut' },
+        { name: 'Steak Ayam', price: 45000, description: 'Daging ayam panggang with kentang goreng' },
+        { name: 'Roti Bakar Keju', price: 15000, description: 'Roti bakar manis with taburan keju melimpah' },
         { name: 'Pisang Goreng Keju', price: 15000, description: 'Pisang goreng renyah srikaya dan keju' },
       ]
     },
@@ -95,9 +95,9 @@ async function main() {
       imageUrl: 'https://images.unsplash.com/photo-1502301103665-0b95cc738daf?auto=format&fit=crop&w=500&q=80',
       menu: [
         { name: 'Gurame Bakar', price: 95000, description: 'Gurame segar bakar bumbu kecap madu' },
-        { name: 'Kepiting Saos Padang', price: 150000, description: 'Kepiting jumbo dengan bumbu padang pedas' },
-        { name: 'Udang Goreng Mentega', price: 85000, description: 'Udang laut goreng dengan mentega gurih' },
-        { name: 'Cah Kangkung Seafood', price: 35000, description: 'Tumis kangkung segar dengan udang dan cumi' },
+        { name: 'Kepiting Saos Padang', price: 150000, description: 'Kepiting jumbo with bumbu padang pedas' },
+        { name: 'Udang Goreng Mentega', price: 85000, description: 'Udang laut goreng with mentega gurih' },
+        { name: 'Cah Kangkung Seafood', price: 35000, description: 'Tumis kangkung segar with udang dan cumi' },
         { name: 'Kelapa Muda Utuh', price: 20000, description: 'Air kelapa muda segar langsung dari buahnya' },
       ]
     },
