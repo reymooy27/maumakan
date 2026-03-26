@@ -1,14 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/lib/supabase/server';
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
+
+// GET /api/reviews?placeId=... - Get reviews for a place
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const placeId = searchParams.get('placeId');
+
+    if (!placeId) {
+      return NextResponse.json({ error: 'Missing placeId' }, { status: 400 });
+    }
+
+    const reviews = await prisma.review.findMany({
+      where: { placeId },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            image: true,
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return NextResponse.json(reviews);
+  } catch (err) {
+    console.error('[GET /api/reviews]', err);
+    return NextResponse.json({ error: 'Failed to fetch reviews' }, { status: 500 });
+  }
+}
 
 // POST /api/reviews - Submit a review (auth required)
 export async function POST(req: NextRequest) {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    // Check both Supabase and NextAuth
+    const session = await getServerSession(authOptions);
+    let userId = session?.user?.id;
 
-    if (!user) {
+    if (!userId) {
+      const supabase = await createClient();
+      const { data: { user: supabaseUser } } = await supabase.auth.getUser();
+      userId = supabaseUser?.id;
+    }
+
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -20,7 +60,12 @@ export async function POST(req: NextRequest) {
     }
 
     const review = await prisma.review.create({
-      data: { placeId, userId: user.id, rating, comment },
+      data: { 
+        placeId, 
+        userId, 
+        rating: Math.round(Number(rating)), 
+        comment 
+      },
     });
 
     // Update place average rating
@@ -28,6 +73,7 @@ export async function POST(req: NextRequest) {
       where: { placeId },
       _avg: { rating: true },
     });
+    
     await prisma.place.update({
       where: { id: placeId },
       data: { rating: avg._avg.rating ?? 0 },

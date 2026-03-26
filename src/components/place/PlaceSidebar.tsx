@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import MenuList from './MenuList';
+import ReviewSection from './ReviewSection';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -441,6 +442,11 @@ function PlaceDetails({ place: p }: { place: NonNullable<ReturnType<typeof useMa
         ) : (
           <p className="text-sm text-gray-600 italic">No menu available yet.</p>
         )}
+      </div>
+
+      {/* Reviews */}
+      <div className="pt-8 border-t border-gray-800">
+        <ReviewSection placeId={p.id} />
       </div>
     </div>
   );
