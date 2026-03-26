@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getUserId } from "@/lib/user";
+import { getUserId, syncUserById } from "@/lib/user";
 
 type Params = { params: Promise<{ id: string }> };
 
 export async function GET(req: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    console.log("[USER_PROFILE_GET] Requested ID:", id);
-
-    // Get current user to check if following, ignore auth errors
-    let currentUserId: string | null = null;
-    try {
-      currentUserId = await getUserId();
-      console.log("[USER_PROFILE_GET] Current User ID:", currentUserId);
-    } catch (authError) {
-      console.warn("[USER_PROFILE_GET] Auth check failed:", authError);
-    }
 
     // Try to find the user
     let user = await prisma.user.findUnique({
@@ -32,21 +22,13 @@ export async function GET(req: NextRequest, { params }: Params) {
             following: true,
             savedPlaces: true,
           }
-        },
-        savedPlaces: {
-          select: {
-            id: true,
-            place: true,
-          }
         }
       }
     });
 
-    // If not found, try to sync before giving up
+    // If not found, try to sync (this handles cases where user exists in Supabase but not yet in Prisma)
     if (!user) {
-      console.log("[USER_PROFILE_GET] User not found, attempting on-demand sync for ID:", id);
       await syncUserById(id);
-      
       user = await prisma.user.findUnique({
         where: { id },
         select: {
@@ -60,25 +42,23 @@ export async function GET(req: NextRequest, { params }: Params) {
               following: true,
               savedPlaces: true,
             }
-          },
-          savedPlaces: {
-            select: {
-              id: true,
-              place: true,
-            }
           }
         }
       });
     }
 
-    console.log("[USER_PROFILE_GET] Prisma result for ID " + id + ":", !!user);
-
     if (!user) {
-      console.error("[USER_PROFILE_GET] User not found in database for ID:", id);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Check if current user is following this user
+    // Get current user to check if following
+    let currentUserId: string | null = null;
+    try {
+      currentUserId = await getUserId();
+    } catch (e) {
+      // Ignore auth errors for public profile view
+    }
+
     let isFollowing = false;
     if (currentUserId && currentUserId !== id) {
       const follow = await prisma.follow.findUnique({
@@ -98,7 +78,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       isSelf: currentUserId === id
     });
   } catch (error) {
-    console.error("[USER_PROFILE_GET]", error);
+    console.error("[USER_GET]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
