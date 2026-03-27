@@ -159,9 +159,12 @@ export default function ReviewSection({ placeId }: { placeId: string }) {
           <p className="text-sm text-gray-500 font-medium mb-3">
             Login untuk memberikan review
           </p>
-          <button className="text-xs font-black text-orange-500 uppercase tracking-widest hover:underline">
+          <Link
+            href="auth/login"
+            className="text-xs font-black text-orange-500 uppercase tracking-widest hover:underline"
+          >
             Sign In Sekarang
-          </button>
+          </Link>
         </div>
       )}
 
