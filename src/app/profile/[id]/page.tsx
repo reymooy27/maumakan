@@ -127,11 +127,11 @@ export default function PublicProfilePage() {
 
             <div className="flex-1 text-center sm:text-left space-y-2">
               <h1 className="text-3xl font-black tracking-tight">{profile.name || 'Account'}</h1>
-              <p className="text-gray-400 font-medium">{profile.isSelf ? profile.email : 'Public Profile'}</p>
+              <p className="text-gray-400 font-medium">{(profile.isSelf === true) ? profile.email : 'Public Profile'}</p>
             </div>
 
             <div className="flex gap-2">
-              {!profile.isSelf && (
+              {(profile.isSelf === false) && (
                 <button 
                   onClick={handleFollow}
                   disabled={isFollowingLoading}
@@ -156,7 +156,7 @@ export default function PublicProfilePage() {
                   )}
                 </button>
               )}
-              {profile.isSelf && (
+              {(profile.isSelf === true) && (
                 <Link 
                   href="/profile"
                   className="flex items-center gap-2 px-6 py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl font-bold transition-all"
