@@ -4,9 +4,8 @@ import { useState } from 'react';
 import useSWR from 'swr';
 import { useSession } from 'next-auth/react';
 import { useAuthStore } from '@/store/authStore';
-import Navbar from '@/components/layout/Navbar';
 import Image from 'next/image';
-import { User, Heart, MapPin, UserPlus, UserCheck, Loader2 } from 'lucide-react';
+import { User, Heart, MapPin, UserPlus, UserCheck, Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 
@@ -106,8 +105,17 @@ export default function PublicProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white pb-20">
-      <Navbar />
+    <div className="h-screen overflow-y-auto bg-gray-950 text-white pb-20">
+      <header className="sticky top-0 z-30 flex items-center px-4 py-3 bg-gray-950/90 backdrop-blur-md border-b border-gray-800/50">
+        <Link
+          href="/"
+          className="flex items-center justify-center w-9 h-9 rounded-xl bg-gray-800 hover:bg-gray-700 transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5 text-white" />
+        </Link>
+        <h1 className="flex-1 text-center text-base font-bold tracking-tight">Profile</h1>
+        <div className="w-9" />
+      </header>
       
       <main className="max-w-4xl mx-auto px-4 pt-24 space-y-8">
         {/* Profile Header */}
