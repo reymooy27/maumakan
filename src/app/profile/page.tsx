@@ -104,13 +104,13 @@ export default function ProfilePage() {
           <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-orange-600/20 to-purple-600/20" />
           
           <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6">
-            <div className="relative group">
-              <div className="w-32 h-32 rounded-full border-4 border-gray-900 overflow-hidden bg-gray-800 shadow-2xl">
+            <div className="relative group flex-shrink-0">
+              <div className="w-24 h-24 rounded-full border-4 border-gray-900 overflow-hidden bg-gray-800 shadow-2xl">
                 {user?.image ? (
                   <Image src={user.image} alt={user.name || 'User'} fill className="object-cover" />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
-                    <User className="w-16 h-16 text-gray-600" />
+                    <User className="w-12 h-12 text-gray-600" />
                   </div>
                 )}
               </div>
