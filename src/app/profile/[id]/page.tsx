@@ -13,6 +13,10 @@ import {
   UserCheck,
   Loader2,
   ArrowLeft,
+  Settings,
+  Camera,
+  Save,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -61,6 +65,10 @@ export default function PublicProfilePage() {
   );
 
   const [isFollowingLoading, setIsFollowingLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editImage, setEditImage] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleFollow = async () => {
     if (!isAuthenticated) {
@@ -86,6 +94,34 @@ export default function PublicProfilePage() {
     } finally {
       setIsFollowingLoading(false);
     }
+  };
+
+  const startEditing = () => {
+    setEditName(profile?.name || "");
+    setEditImage(profile?.image || "");
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: editName, image: editImage }),
+      });
+
+      if (res.ok) {
+        mutate();
+        setIsEditing(false);
+      } else {
+        alert("Failed to update profile");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Error updating profile");
+    }
+    setIsSaving(false);
   };
 
   if (isLoading) {
@@ -141,28 +177,59 @@ export default function PublicProfilePage() {
           <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-r from-orange-600/20 to-purple-600/20" />
 
           <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-6">
-            <div className="w-24 h-24 rounded-full border-4 border-gray-900 overflow-hidden bg-gray-800 shadow-2xl flex-shrink-0">
-              {profile.image ? (
-                <Image
-                  src={profile.image}
-                  alt={profile.name || "User"}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <User className="w-12 h-12 text-gray-600" />
-                </div>
-              )}
+            <div className={`relative group ${profile.isSelf === true ? '' : ''} flex-shrink-0`}>
+              <div className="w-24 h-24 rounded-full border-4 border-gray-900 overflow-hidden bg-gray-800 shadow-2xl">
+                {profile.image ? (
+                  <Image
+                    src={profile.image}
+                    alt={profile.name || "User"}
+                    width={96}
+                    height={96}
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <User className="w-12 h-12 text-gray-600" />
+                  </div>
+                )}
+                {profile.isSelf === true && isEditing && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 text-center sm:text-left space-y-2">
-              <h1 className="text-3xl font-black tracking-tight">
-                {profile.name || "Account"}
-              </h1>
-              <p className="text-gray-400 font-medium">
-                {profile.isSelf === true ? profile.email : "Public Profile"}
-              </p>
+              {isEditing ? (
+                <div className="space-y-4">
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider">Username</label>
+                    <input
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                      placeholder="Your name"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider">Profile Image URL</label>
+                    <input
+                      value={editImage}
+                      onChange={(e) => setEditImage(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:border-orange-500 transition-colors"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h1 className="text-3xl font-black tracking-tight">
+                    {profile.name || "Account"}
+                  </h1>
+                  <p className="text-gray-400 font-medium">{profile.email}</p>
+                </>
+              )}
             </div>
 
             <div className="flex gap-2">
@@ -192,12 +259,35 @@ export default function PublicProfilePage() {
                 </button>
               )}
               {profile.isSelf === true && (
-                <Link
-                  href="/profile"
-                  className="flex items-center gap-2 px-6 py-2.5 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl font-bold transition-all"
-                >
-                  Edit Profile
-                </Link>
+                <>
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        className="flex items-center gap-2 px-4 py-2 bg-orange-600 hover:bg-orange-700 rounded-xl font-bold transition-all disabled:opacity-50"
+                      >
+                        <Save className="w-4 h-4" />
+                        {isSaving ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        onClick={() => setIsEditing(false)}
+                        className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-bold transition-all"
+                      >
+                        <X className="w-4 h-4" />
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={startEditing}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-xl font-bold transition-all"
+                    >
+                      <Settings className="w-4 h-4" />
+                      Edit Profile
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>
