@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 
 interface ProfileData {
   id: string;
@@ -49,6 +49,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function PublicProfilePage() {
   const params = useParams();
+  const router = useRouter();
   const userId = params.id as string;
   const { data: session } = useSession();
   const { user: supabaseUser } = useAuthStore();
@@ -72,7 +73,7 @@ export default function PublicProfilePage() {
 
   const handleFollow = async () => {
     if (!isAuthenticated) {
-      alert("Sign in to follow users!");
+      router.push("/auth/login");
       return;
     }
 
