@@ -11,6 +11,7 @@ export async function GET(req: NextRequest) {
   const west = searchParams.get('west');
   const zoom = parseInt(searchParams.get('zoom') || '15');
   const search = searchParams.get('search') || '';
+  const searchOnly = searchParams.get('searchOnly') === 'true';
   const minRating = parseFloat(searchParams.get('minRating') || '0');
   const minPrice = parseInt(searchParams.get('minPrice') || '0');
   const maxPrice = parseInt(searchParams.get('maxPrice') || '500000');
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest) {
       andConditions.push({ rating: { gte: minRating } });
     }
 
-    if (north && south && east && west) {
+    if (!searchOnly && north && south && east && west) {
       andConditions.push({
         lat: { gte: parseFloat(south), lte: parseFloat(north) },
         lng: { gte: parseFloat(west), lte: parseFloat(east) }
@@ -66,13 +67,13 @@ export async function GET(req: NextRequest) {
     // When zoomed out, we only want the most "important" (highly rated) places.
     // This reduces the payload and keeps the map responsive.
     let take = 100;
-    if (zoom < 10) take = 20;
-    else if (zoom < 12) take = 40;
-    else if (zoom < 14) take = 60;
+    if (!searchOnly && zoom < 10) take = 20;
+    else if (!searchOnly && zoom < 12) take = 40;
+    else if (!searchOnly && zoom < 14) take = 60;
 
     // If we're zoomed out and NOT searching, we enforce an even stricter importance filter
     // to mimic Google Maps showing only major landmarks.
-    if (!search && zoom < 14) {
+    if (!search && zoom < 14 && !searchOnly) {
       andConditions.push({ rating: { gte: 4.2 } });
     }
 

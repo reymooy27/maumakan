@@ -19,7 +19,6 @@ export default function SearchSidebar() {
     setSearchQuery,
     searchResults,
     setSearchResults,
-    center,
     setCenter,
     setSelectedPlace,
     setZoom,
@@ -58,7 +57,8 @@ export default function SearchSidebar() {
         params.set('search', searchQuery);
         if (filters.amenities.length > 0) params.set('amenities', filters.amenities.join(','));
         if (filters.dietaryTags.length > 0) params.set('dietary', filters.dietaryTags.join(','));
-        
+        params.set('searchOnly', 'true');
+
         const url = `/api/places?${params.toString()}`;
         const res = await fetch(url);
         const data = await res.json();
@@ -85,31 +85,16 @@ export default function SearchSidebar() {
     return () => { active = false; };
   }, [searchSidebarOpen, searchQuery, filters.amenities, filters.dietaryTags]);
 
-  /* ── Process and sort results by distance to map center (local only, no refetch) ── */
-  const sortedByDistance = useMemo(() => {
+  /* ── Sort search results by rating (relevance for search, not distance) ── */
+  const sortedResults = useMemo(() => {
     if (!rawResults.length) return [];
+    return [...rawResults].sort((a, b) => b.rating - a.rating);
+  }, [rawResults]);
 
-    const R = 6371; // Earth radius in km
-    const withDistances = rawResults.map((p: Place) => {
-      const dLat = ((p.lat - center[0]) * Math.PI) / 180;
-      const dLon = ((p.lng - center[1]) * Math.PI) / 180;
-      const a =
-        Math.sin(dLat / 2) ** 2 +
-        Math.cos((center[0] * Math.PI) / 180) *
-          Math.cos((p.lat * Math.PI) / 180) *
-          Math.sin(dLon / 2) ** 2;
-      const distance = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-      return { ...p, distance };
-    });
-
-    // Sort by distance (closest first) and take top 10 for search
-    return withDistances.sort((a, b) => a.distance - b.distance).slice(0, 10);
-  }, [rawResults, center]);
-
-  /* ── Sync sorted results to global store for markers ── */
+  /* ── Sync results to global store for markers ── */
   useEffect(() => {
-    setSearchResults(sortedByDistance);
-  }, [sortedByDistance, setSearchResults]);
+    setSearchResults(sortedResults);
+  }, [sortedResults, setSearchResults]);
 
   /* ── open / close animation ── */
   useEffect(() => {

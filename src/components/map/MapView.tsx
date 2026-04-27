@@ -19,7 +19,6 @@ import { LngLatBounds } from "maplibre-gl";
 import Supercluster from "supercluster";
 import type { PointFeature } from "supercluster";
 import PlaceMarker from "./PlaceMarker";
-import ClusterMarker from "./ClusterMarker";
 
 const ROUTE_LAYER: LineLayerSpecification = {
   id: "route-line",
@@ -237,14 +236,38 @@ function RouteFitter({
   return null;
 }
 
+type ClusterItem = {
+  cluster: PointFeature<Record<string, unknown>>;
+  repPlace: Place;
+};
+
+function enrichClusters(
+  sc: Supercluster,
+  raw: PointFeature<Record<string, unknown>>[],
+): ClusterItem[] {
+  return raw.map((cluster) => {
+    const { cluster: isCluster, placeId } = cluster.properties;
+    if (isCluster) {
+      const leaves = sc.getLeaves(Number(cluster.id), 1);
+      const firstLeaf = leaves[0]?.properties as Place | undefined;
+      if (firstLeaf) {
+        return { cluster, repPlace: firstLeaf };
+      }
+    } else if (placeId) {
+      return {
+        cluster,
+        repPlace: cluster.properties as unknown as Place,
+      };
+    }
+    return null;
+  }).filter(Boolean) as ClusterItem[];
+}
+
 function ClusteredMarkers({ places }: { places: Place[] }) {
   const map = useMap();
-  const [clusters, setClusters] = useState<
-    PointFeature<Record<string, unknown>>[]
-  >([]);
+  const [markers, setMarkers] = useState<ClusterItem[]>([]);
   const superclusterRef = useRef<Supercluster | null>(null);
 
-  // Initialize supercluster when places change
   useEffect(() => {
     const sc = new Supercluster({
       radius: 60,
@@ -254,7 +277,7 @@ function ClusteredMarkers({ places }: { places: Place[] }) {
 
     const points = places.map((p) => ({
       type: "Feature" as const,
-      properties: { ...p, cluster: false, placeId: p.id },
+      properties: { ...p, cluster: false, placeId: p.id } as Record<string, unknown>,
       geometry: {
         type: "Point" as const,
         coordinates: [p.lng, p.lat],
@@ -264,38 +287,12 @@ function ClusteredMarkers({ places }: { places: Place[] }) {
     sc.load(points);
     superclusterRef.current = sc;
 
-    // Initial cluster computation (scheduled to avoid cascading renders)
     const m = map.current;
     if (m) {
       const id = requestAnimationFrame(() => {
         const bbox = m.getBounds();
         const zoom = Math.floor(m.getZoom());
-        setClusters(
-          sc.getClusters(
-            [
-              bbox.getWest(),
-              bbox.getSouth(),
-              bbox.getEast(),
-              bbox.getNorth(),
-            ],
-            zoom,
-          ),
-        );
-      });
-      return () => cancelAnimationFrame(id);
-    }
-  }, [places, map]);
-
-  // Update clusters on map move
-  useEffect(() => {
-    const m = map.current;
-    if (!m || !superclusterRef.current) return;
-
-    const handleMove = () => {
-      const bbox = m.getBounds();
-      const zoom = Math.floor(m.getZoom());
-      setClusters(
-        superclusterRef.current!.getClusters(
+        const raw = sc.getClusters(
           [
             bbox.getWest(),
             bbox.getSouth(),
@@ -303,8 +300,30 @@ function ClusteredMarkers({ places }: { places: Place[] }) {
             bbox.getNorth(),
           ],
           zoom,
-        ),
+        );
+setMarkers(enrichClusters(superclusterRef.current!, raw));
+      });
+      return () => cancelAnimationFrame(id);
+    }
+  }, [places, map]);
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !superclusterRef.current) return;
+
+    const handleMove = () => {
+      const bbox = m.getBounds();
+      const zoom = Math.floor(m.getZoom());
+      const raw = superclusterRef.current!.getClusters(
+        [
+          bbox.getWest(),
+          bbox.getSouth(),
+          bbox.getEast(),
+          bbox.getNorth(),
+        ],
+        zoom,
       );
+      setMarkers(enrichClusters(superclusterRef.current!, raw));
     };
 
     m.on("move", handleMove);
@@ -315,40 +334,18 @@ function ClusteredMarkers({ places }: { places: Place[] }) {
 
   return (
     <>
-      {clusters.map((cluster) => {
-        const [lng, lat] = cluster.geometry.coordinates;
-        const { cluster: isCluster, point_count: pointCount } =
-          cluster.properties;
-
-        if (isCluster) {
-          return (
-            <ClusterMarker
-              key={`cluster-${cluster.id}`}
-              longitude={lng}
-              latitude={lat}
-              pointCount={pointCount as number}
-              onClick={() => {
-                const expansionZoom =
-                  superclusterRef.current!.getClusterExpansionZoom(
-                    Number(cluster.id),
-                  );
-                map.current?.flyTo({
-                  center: [lng, lat],
-                  zoom: expansionZoom,
-                  duration: 1000,
-                });
-              }}
-            />
-          );
-        }
-
-        const place = cluster.properties as unknown as Place;
+      {markers.map(({ repPlace, cluster }) => {
+        const [clusterLng, clusterLat] = cluster.geometry.coordinates;
+        const coords =
+          repPlace.lat !== undefined
+            ? [repPlace.lng, repPlace.lat]
+            : [clusterLng, clusterLat];
         return (
           <PlaceMarker
-            key={place.id}
-            place={place}
-            longitude={lng}
-            latitude={lat}
+            key={repPlace.id}
+            place={repPlace}
+            longitude={coords[0]}
+            latitude={coords[1]}
           />
         );
       })}
