@@ -6,7 +6,7 @@ import PlaceSidebar from "@/components/place/PlaceSidebar";
 import DirectionSidebar from "@/components/place/DirectionSidebar";
 import SearchSidebar from "@/components/search/SearchSidebar";
 
-// Leaflet needs to be loaded client-side only
+// MapLibre GL needs to be loaded client-side only
 const MapView = dynamic(() => import("@/components/map/MapView"), {
   ssr: false,
   loading: () => (

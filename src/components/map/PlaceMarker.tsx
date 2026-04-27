@@ -1,7 +1,6 @@
 'use client';
 
-import { Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
+import { Marker } from 'react-map-gl/maplibre';
 import { Place } from '@/types';
 import { useMapStore } from '@/store/mapStore';
 import { useSavedPlaces } from '@/hooks/useSavedPlaces';
@@ -13,54 +12,13 @@ const TYPE_COLORS: Record<string, string> = {
   food_stall: '#34d399',
 };
 
-function createIcon(color: string, isHovered: boolean = false, isSaved: boolean = false) {
-  const hoverStyles = isHovered 
-    ? 'box-shadow: 0 0 20px 8px rgba(255, 255, 255, 0.8), 0 4px 12px rgba(0,0,0,0.4); transform: rotate(-45deg) scale(1.2); z-index: 1000;' 
-    : 'box-shadow: 0 4px 12px rgba(0,0,0,0.4); transform: rotate(-45deg) scale(1);';
-
-  const heartBadge = isSaved ? `
-    <div style="
-      position: absolute;
-      top: -8px; right: -8px;
-      background: white;
-      border-radius: 50%;
-      width: 18px; height: 18px;
-      display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-      z-index: 2000;
-      color: #ef4444;
-      font-size: 12px;
-      line-height: 1;
-    ">♥</div>
-  ` : '';
-
-  return L.divIcon({
-    className: '',
-    html: `
-      <div style="position: relative; width: 36px; height: 36px;">
-        <div style="
-          width: 100%; height: 100%;
-          background: ${color};
-          border: 3px solid white;
-          border-radius: 50% 50% 50% 0;
-          transition: all 0.2s ease-out;
-          ${hoverStyles}
-          display:flex; align-items:center; justify-content:center;
-        ">
-          <div style="transform:rotate(45deg); color:white; font-size:14px;">🍽</div>
-        </div>
-        ${heartBadge}
-      </div>
-    `,
-    iconSize: [36, 36],
-    iconAnchor: [18, 36],
-    popupAnchor: [0, -36],
-  });
+interface Props {
+  place: Place;
+  longitude: number;
+  latitude: number;
 }
 
-interface Props { place: Place; }
-
-export default function PlaceMarker({ place }: Props) {
+export default function PlaceMarker({ place, longitude, latitude }: Props) {
   const { setSelectedPlace, hoveredPlaceId } = useMapStore();
   const { isSaved } = useSavedPlaces();
   const color = TYPE_COLORS[place.type] ?? '#f97316';
@@ -71,7 +29,7 @@ export default function PlaceMarker({ place }: Props) {
   const now = new Date();
   const utcMinutes = now.getUTCHours() * 60 + now.getUTCMinutes();
   const witaMinutes = (utcMinutes + 8 * 60) % 1440;
-  
+
   let isOpen = false;
   if (place.openTime <= place.closeTime) {
     isOpen = witaMinutes >= place.openTime && witaMinutes <= place.closeTime;
@@ -80,22 +38,39 @@ export default function PlaceMarker({ place }: Props) {
   }
 
   return (
-    <Marker
-      position={[place.lat, place.lng]}
-      icon={createIcon(color, isHovered, saved)}
-      opacity={isOpen ? 1 : 0.4}
-      zIndexOffset={isHovered ? 1000 : 0}
-      eventHandlers={{ click: () => setSelectedPlace(place) }}
-    >
-      <Popup autoPan={false}>
-        <div className="flex flex-col gap-0.5">
-          <div className="text-sm font-semibold flex items-center gap-1.5">
-            {place.name}
-            {!isOpen && <span className="text-[10px] bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded uppercase font-bold">Closed</span>}
+    <Marker longitude={longitude} latitude={latitude}>
+      <div
+        className="relative cursor-pointer"
+        style={{ opacity: isOpen ? 1 : 0.4, zIndex: isHovered ? 1000 : 'auto' }}
+        onClick={() => setSelectedPlace(place)}
+      >
+        <div
+          className="relative w-9 h-9 transition-transform duration-200 ease-out"
+          style={{
+            transform: `rotate(-45deg) scale(${isHovered ? 1.2 : 1})`,
+            filter: isHovered
+              ? 'drop-shadow(0 0 8px rgba(255,255,255,0.8))'
+              : 'drop-shadow(0 4px 6px rgba(0,0,0,0.4))',
+          }}
+        >
+          <div
+            className="w-full h-full border-[3px] border-white flex items-center justify-center"
+            style={{
+              background: color,
+              borderRadius: '50% 50% 50% 0',
+            }}
+          >
+            <div style={{ transform: 'rotate(45deg)', color: 'white', fontSize: '14px' }}>
+              🍽
+            </div>
           </div>
-          <div className="text-xs text-gray-400 capitalize">{place.type.replace('_', ' ')}</div>
         </div>
-      </Popup>
+        {saved && (
+          <div className="absolute -top-2 -right-2 bg-white rounded-full w-[18px] h-[18px] flex items-center justify-center shadow-md text-red-500 text-xs z-10">
+            ♥
+          </div>
+        )}
+      </div>
     </Marker>
   );
 }

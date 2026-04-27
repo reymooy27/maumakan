@@ -1,48 +1,56 @@
-'use client';
+"use client";
 
-import { usePlaces } from '@/hooks/usePlaces';
-import { useMapStore } from '@/store/mapStore';
-import { Place } from '@/types';
-import 'leaflet/dist/leaflet.css';
-import { useEffect, useState, useRef, useMemo } from 'react';
-import { MapContainer, TileLayer, useMapEvents, Marker, Popup, useMap, Polyline } from 'react-leaflet';
-import PlaceMarker from './PlaceMarker';
-import L from 'leaflet';
-import { LocateFixed } from 'lucide-react';
+import { usePlaces } from "@/hooks/usePlaces";
+import { useMapStore } from "@/store/mapStore";
+import { Place } from "@/types";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { LocateFixed } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Map,
+  Marker,
+  Source,
+  Layer,
+  useMap,
+  NavigationControl,
+} from "react-map-gl/maplibre";
+import type { LineLayerSpecification } from "maplibre-gl";
+import { LngLatBounds } from "maplibre-gl";
+import Supercluster from "supercluster";
+import type { PointFeature } from "supercluster";
+import PlaceMarker from "./PlaceMarker";
+import ClusterMarker from "./ClusterMarker";
 
-// Fix Leaflet's default icon issue in React
-delete (L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown })._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-// HTML Div Icon for Heartbeat Animation
-const pulsingIcon = L.divIcon({
-  className: 'custom-pulsing-icon',
-  html: `
-    <div class="relative flex justify-center items-center w-6 h-6">
-      <div class="absolute w-full h-full bg-blue-500 rounded-full animate-ping opacity-75"></div>
-      <div class="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>
-    </div>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-});
+const ROUTE_LAYER: LineLayerSpecification = {
+  id: "route-line",
+  type: "line",
+  source: "route",
+  layout: {
+    "line-join": "round",
+    "line-cap": "round",
+  },
+  paint: {
+    "line-color": "#3b82f6",
+    "line-width": 6,
+    "line-opacity": 0.9,
+  },
+};
 
 function MapEventHandler() {
+  const map = useMap();
   const setBounds = useMapStore((s) => s.setBounds);
   const setCenter = useMapStore((s) => s.setCenter);
   const setZoom = useMapStore((s) => s.setZoom);
 
-  useMapEvents({
-    moveend(e) {
-      const map = e.target;
-      const b = map.getBounds();
-      
-      // Update bounds for fetching
-      // Rounding to 4 decimal places resolves infinite updates during micro-pans (autoPan)
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+
+    const handleMoveEnd = () => {
+      const c = m.getCenter();
+      const b = m.getBounds();
+      const z = m.getZoom();
+
       setBounds({
         north: Number(b.getNorth().toFixed(4)),
         south: Number(b.getSouth().toFixed(4)),
@@ -50,16 +58,18 @@ function MapEventHandler() {
         west: Number(b.getWest().toFixed(4)),
       });
 
-      // Update center and zoom for overall app state
-      const c = map.getCenter();
       setCenter([
         Math.round(c.lat * 1000000) / 1000000,
-        Math.round(c.lng * 1000000) / 1000000
+        Math.round(c.lng * 1000000) / 1000000,
       ]);
-      // zoom set is already rounded in store, but we can round here too
-      setZoom(Math.round(map.getZoom() * 100) / 100);
-    },
-  });
+      setZoom(Math.round(z * 100) / 100);
+    };
+
+    m.on("moveend", handleMoveEnd);
+    return () => {
+      m.off("moveend", handleMoveEnd);
+    };
+  }, [map, setBounds, setCenter, setZoom]);
 
   return null;
 }
@@ -70,167 +80,278 @@ function ViewSync() {
   const zoom = useMapStore((s) => s.zoom);
 
   useEffect(() => {
-    const mapCenter = map.getCenter();
-    const isSameCenter = 
-      Math.abs(mapCenter.lat - center[0]) < 0.0001 && 
+    const m = map.current;
+    if (!m) return;
+
+    const mapCenter = m.getCenter();
+    const isSameCenter =
+      Math.abs(mapCenter.lat - center[0]) < 0.0001 &&
       Math.abs(mapCenter.lng - center[1]) < 0.0001;
-    const isSameZoom = Math.abs(map.getZoom() - zoom) < 0.1;
+    const isSameZoom = Math.abs(m.getZoom() - zoom) < 0.1;
 
     if (!isSameCenter || !isSameZoom) {
-      map.flyTo(center, zoom, { animate: true, duration: 1 });
+      m.flyTo({ center: [center[1], center[0]], zoom, duration: 1000 });
     }
   }, [center, zoom, map]);
 
   return null;
 }
 
-function LocationMarker() {
+function UserLocationMarker() {
   const userLocation = useMapStore((s) => s.userLocation);
   const setUserLocation = useMapStore((s) => s.setUserLocation);
   const setCenter = useMapStore((s) => s.setCenter);
   const map = useMap();
 
   useEffect(() => {
-    // Only fetch location once on mount
-    const onLocationFound = (e: L.LocationEvent) => {
-      const coords: [number, number] = [e.latlng.lat, e.latlng.lng];
-      setUserLocation(coords);
-      setCenter(coords);
-      map.flyTo(e.latlng, 15);
-    };
+    const m = map.current;
+    if (!m) return;
 
-    map.on("locationfound", onLocationFound);
-    map.locate();
+    if (!userLocation && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords: [number, number] = [
+            pos.coords.latitude,
+            pos.coords.longitude,
+          ];
+          setUserLocation(coords);
+          setCenter(coords);
+          m.flyTo({
+            center: [coords[1], coords[0]],
+            zoom: 15,
+            duration: 1000,
+          });
+        },
+        (err) => console.error("Geolocation error:", err),
+      );
+    }
+  }, [map, userLocation, setUserLocation, setCenter]);
 
-    return () => {
-      map.off("locationfound", onLocationFound);
-    };
-  }, [map, setUserLocation, setCenter]);
+  if (!userLocation) return null;
 
-  return userLocation === null ? null : (
-    <Marker position={userLocation} icon={pulsingIcon}>
-      <Popup autoPan={false}>Lokasi Anda Saat Ini</Popup>
+  return (
+    <Marker longitude={userLocation[1]} latitude={userLocation[0]}>
+      <div
+        className="relative flex justify-center items-center w-6 h-6"
+        title="Lokasi Anda Saat Ini"
+      >
+        <div className="absolute w-full h-full bg-blue-500 rounded-full animate-ping opacity-75" />
+        <div className="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg" />
+      </div>
     </Marker>
   );
 }
 
-// Custom control component that sits outside the React-Leaflet Map context
-// but uses the map instance
-function LocateControl({ position }: { position: [number, number] | null }) {
+function LocateControl({
+  position,
+}: {
+  position: [number, number] | null;
+}) {
   const map = useMap();
   const selectedPlace = useMapStore((s) => s.selectedPlace);
   const filterPanelOpen = useMapStore((s) => s.filterPanelOpen);
-  
+
   const isSidebarOpen = !!selectedPlace;
   const isFilterOpen = filterPanelOpen;
-  
+
   return (
-    <div 
+    <div
       className={`
-        leaflet-bottom leaflet-right mb-6 mr-4 z-[1000] absolute bottom-0 right-0 
+        absolute bottom-6 right-4 z-[1000]
         transition-all duration-300 ease-in-out
-        ${isSidebarOpen 
-          ? '-translate-y-[45vh] md:translate-y-0 md:-translate-x-[384px]' 
-          : isFilterOpen 
-            ? 'md:-translate-x-[320px]' 
-            : 'translate-x-0 translate-y-0'}
+        ${
+          isSidebarOpen
+            ? "-translate-y-[45vh] md:translate-y-0 md:-translate-x-[384px]"
+            : isFilterOpen
+              ? "md:-translate-x-[320px]"
+              : "translate-x-0 translate-y-0"
+        }
       `}
     >
-      <div className="leaflet-control leaflet-bar">
-        <button 
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if (position) {
-              map.flyTo(position, 15, { animate: true, duration: 1 });
-            } else {
-              map.locate();
-            }
-          }}
-          disabled={!position}
-          className="bg-white hover:bg-gray-100 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-blue-600 w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-colors"
-          title="Ke Lokasi Saya"
-        >
-          <LocateFixed size={24} strokeWidth={2.5} />
-        </button>
-      </div>
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const m = map.current;
+          if (!m) return;
+          if (position) {
+            m.flyTo({
+              center: [position[1], position[0]],
+              zoom: 15,
+              duration: 1000,
+            });
+          } else if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((pos) => {
+              const coords: [number, number] = [
+                pos.coords.latitude,
+                pos.coords.longitude,
+              ];
+              m.flyTo({
+                center: [coords[1], coords[0]],
+                zoom: 15,
+                duration: 1000,
+              });
+            });
+          }
+        }}
+        disabled={!position && !navigator.geolocation}
+        className="bg-white hover:bg-gray-100 disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed text-blue-600 w-12 h-12 rounded-full shadow-lg flex items-center justify-center cursor-pointer transition-colors"
+        title="Ke Lokasi Saya"
+      >
+        <LocateFixed size={24} strokeWidth={2.5} />
+      </button>
     </div>
   );
 }
 
-// Auto fit bounds to route when a route is drawn or routing starts
-function RouteFitter({ geometry, isRouting }: { geometry: [number, number][] | null, isRouting: boolean }) {
+function RouteFitter({
+  geometry,
+  isRouting,
+}: {
+  geometry: [number, number][] | null;
+  isRouting: boolean;
+}) {
   const map = useMap();
   const prevIsRouting = useRef(false);
-  
+
   useEffect(() => {
-    if (geometry && geometry.length > 0) {
-      const bounds = L.latLngBounds(geometry);
-      
-      if (isRouting) {
-        // When routing starts, focus on the center of the direction line only once without animation
-        if (!prevIsRouting.current) {
-          map.setView(bounds.getCenter(), Math.max(map.getZoom(), 15), { animate: false });
-        }
-      } else {
-        // Normal fit bounds when route is just previewed
-        map.fitBounds(bounds, { padding: [50, 50] });
+    const m = map.current;
+    if (!m || !geometry || geometry.length === 0) return;
+
+    const bounds = new LngLatBounds();
+    geometry.forEach(([lat, lng]) => bounds.extend([lng, lat]));
+
+    if (isRouting) {
+      if (!prevIsRouting.current) {
+        const center = bounds.getCenter();
+        m.setCenter([center.lng, center.lat]);
+        m.setZoom(Math.max(m.getZoom(), 15));
       }
+    } else {
+      m.fitBounds(bounds, { padding: 50, duration: 1000 });
     }
+
     prevIsRouting.current = isRouting;
   }, [geometry, map, isRouting]);
-  
+
   return null;
 }
 
-function CollisionMarkerLayer({ places }: { places: Place[] }) {
+function ClusteredMarkers({ places }: { places: Place[] }) {
   const map = useMap();
-  const zoom = useMapStore((s) => s.zoom);
+  const [clusters, setClusters] = useState<
+    PointFeature<Record<string, unknown>>[]
+  >([]);
+  const superclusterRef = useRef<Supercluster | null>(null);
 
-  // Semantic Density Management:
-  // At low zoom, we use large grid cells to only show a few high-quality "anchor" points.
-  // At high zoom, we reduce the grid size to show everything.
-  const prunedPlaces = useMemo(() => {
-    const result = [];
-    const grid = new Set();
-    
-    // Dynamic grid size: higher values = fewer markers
-    let gridSize = 0;
-    if (zoom < 10) gridSize = 150;
-    else if (zoom < 12) gridSize = 120;
-    else if (zoom < 14) gridSize = 80;
-    else if (zoom < 15) gridSize = 50;
-    else if (zoom < 16) gridSize = 30;
-    else gridSize = 0; // Show everything when zoomed in close
+  // Initialize supercluster when places change
+  useEffect(() => {
+    const sc = new Supercluster({
+      radius: 60,
+      maxZoom: 16,
+      minPoints: 2,
+    });
 
-    // If gridSize is 0, don't prune at all
-    if (gridSize === 0) return places;
+    const points = places.map((p) => ({
+      type: "Feature" as const,
+      properties: { ...p, cluster: false, placeId: p.id },
+      geometry: {
+        type: "Point" as const,
+        coordinates: [p.lng, p.lat],
+      },
+    }));
 
-    // Sort by rating desc to ensure we keep the most "important" places in each grid cell
-    const sorted = [...places].sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    sc.load(points);
+    superclusterRef.current = sc;
 
-    for (const p of sorted) {
-      const point = map.latLngToLayerPoint([p.lat, p.lng]);
-      const gx = Math.floor(point.x / gridSize);
-      const gy = Math.floor(point.y / gridSize);
-      const key = `${gx}-${gy}`;
-
-      if (!grid.has(key)) {
-        grid.add(key);
-        result.push(p);
-      }
+    // Initial cluster computation (scheduled to avoid cascading renders)
+    const m = map.current;
+    if (m) {
+      const id = requestAnimationFrame(() => {
+        const bbox = m.getBounds();
+        const zoom = Math.floor(m.getZoom());
+        setClusters(
+          sc.getClusters(
+            [
+              bbox.getWest(),
+              bbox.getSouth(),
+              bbox.getEast(),
+              bbox.getNorth(),
+            ],
+            zoom,
+          ),
+        );
+      });
+      return () => cancelAnimationFrame(id);
     }
-    
-    // Limit total markers on screen for extreme performance
-    const maxVisible = zoom < 13 ? 30 : zoom < 15 ? 60 : 100;
-    return result.slice(0, maxVisible);
-  }, [places, zoom, map]);
+  }, [places, map]);
+
+  // Update clusters on map move
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !superclusterRef.current) return;
+
+    const handleMove = () => {
+      const bbox = m.getBounds();
+      const zoom = Math.floor(m.getZoom());
+      setClusters(
+        superclusterRef.current!.getClusters(
+          [
+            bbox.getWest(),
+            bbox.getSouth(),
+            bbox.getEast(),
+            bbox.getNorth(),
+          ],
+          zoom,
+        ),
+      );
+    };
+
+    m.on("move", handleMove);
+    return () => {
+      m.off("move", handleMove);
+    };
+  }, [map]);
 
   return (
     <>
-      {prunedPlaces.map((place) => (
-        <PlaceMarker key={place.id} place={place} />
-      ))}
+      {clusters.map((cluster) => {
+        const [lng, lat] = cluster.geometry.coordinates;
+        const { cluster: isCluster, point_count: pointCount } =
+          cluster.properties;
+
+        if (isCluster) {
+          return (
+            <ClusterMarker
+              key={`cluster-${cluster.id}`}
+              longitude={lng}
+              latitude={lat}
+              pointCount={pointCount as number}
+              onClick={() => {
+                const expansionZoom =
+                  superclusterRef.current!.getClusterExpansionZoom(
+                    Number(cluster.id),
+                  );
+                map.current?.flyTo({
+                  center: [lng, lat],
+                  zoom: expansionZoom,
+                  duration: 1000,
+                });
+              }}
+            />
+          );
+        }
+
+        const place = cluster.properties as unknown as Place;
+        return (
+          <PlaceMarker
+            key={place.id}
+            place={place}
+            longitude={lng}
+            latitude={lat}
+          />
+        );
+      })}
     </>
   );
 }
@@ -241,50 +362,52 @@ export default function MapView() {
   const userLocation = useMapStore((s) => s.userLocation);
   const { places } = usePlaces();
 
-  // Create stable initial values. MapContainer only uses them on mount.
+  // Create stable initial values. Map only uses them on mount.
   const [initialView] = useState(() => ({
-    center: useMapStore.getState().center,
-    zoom: useMapStore.getState().zoom
+    longitude: useMapStore.getState().center[1],
+    latitude: useMapStore.getState().center[0],
+    zoom: useMapStore.getState().zoom,
   }));
+
+  const routeGeoJSON = useMemo(() => {
+    if (!routeGeometry || routeGeometry.length === 0) return null;
+    return {
+      type: "Feature" as const,
+      properties: {},
+      geometry: {
+        type: "LineString" as const,
+        coordinates: routeGeometry.map(([lat, lng]) => [lng, lat]),
+      },
+    };
+  }, [routeGeometry]);
 
   return (
     <div className="relative w-full h-full">
-      <MapContainer
-        center={initialView.center}
-        zoom={initialView.zoom}
+      <Map
+        initialViewState={initialView}
         minZoom={3}
         maxZoom={22}
-        className="w-full h-full z-0"
-        zoomControl={false}
-        preferCanvas={true}
+        style={{ width: "100%", height: "100%" }}
+        mapStyle="https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json"
+        dragRotate={true}
+        touchZoomRotate={true}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          minZoom={3}
-          maxZoom={22}
-          maxNativeZoom={19}
-        />
         <MapEventHandler />
         <ViewSync />
-        <LocationMarker />
-        
-        {/* Draw Route Polyline if present */}
-        {routeGeometry && routeGeometry.length > 0 && (
-          <Polyline 
-            positions={routeGeometry} 
-            pathOptions={{ color: '#3b82f6', weight: 6, opacity: 0.9, lineJoin: 'round', lineCap: 'round' }} 
-          />
-        )}
-        
-        {/* Auto fit map bounds when a route is drawn or routing starts */}
-        <RouteFitter geometry={routeGeometry} isRouting={isRouting} />
+        <UserLocationMarker />
 
-        {/* Managed density layer - no visual clustering, but performant collision management */}
-        <CollisionMarkerLayer places={places} />
-        
+        {routeGeoJSON && (
+          <Source id="route" type="geojson" data={routeGeoJSON}>
+            <Layer {...ROUTE_LAYER} />
+          </Source>
+        )}
+
+        <RouteFitter geometry={routeGeometry} isRouting={isRouting} />
+        <ClusteredMarkers places={places} />
         <LocateControl position={userLocation} />
-      </MapContainer>
+
+        <NavigationControl position="top-right" visualizePitch={true} />
+      </Map>
     </div>
   );
 }
